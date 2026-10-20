@@ -1,0 +1,67 @@
+# serializer version: 1
+# name: test_invalid_scl_snapshots[duplicate_attribute-<identity profile="a" profile="b">b</identity>]
+  "Line 1:23: Duplicate attribute 'profile' in <identity> (hint: Remove duplicate 'profile' attribute)"
+# ---
+# name: test_invalid_scl_snapshots[duplicate_identity-<identity profile="a">first</identity><identity profile="b">second</identity>]
+  'Line 1:39: Duplicate <identity> tag; exactly one <identity> is allowed (hint: Remove duplicate <identity>)'
+# ---
+# name: test_invalid_scl_snapshots[duplicate_output-<identity profile="a">b</identity><output format="markdown">first</output><output format="markdown">second</output>]
+  'Line 1:75: Duplicate <output> tag; at most one <output> is allowed (hint: Remove duplicate <output>)'
+# ---
+# name: test_invalid_scl_snapshots[example_pair_missing_output-<identity profile="a">b</identity><example pair="true"><input>in</input></example>]
+  'Line 1:35: <example pair="true"> must contain exactly one <input> and one <output> (found 1 inputs, 0 outputs) (hint: Ensure exactly one <input> and one <output> are inside <example>)'
+# ---
+# name: test_invalid_scl_snapshots[invalid_boolean_attribute-<identity profile="a">b</identity><example pair="yes"><input>in</input><output>out</output></example>]
+  'Line 1:35: Invalid boolean value \'yes\' for attribute \'pair\' in <example> (hint: Use pair="true" or pair="false")'
+# ---
+# name: test_invalid_scl_snapshots[invalid_json_schema_body-<identity profile="a">b</identity>\n<output format="json_schema">\n{\n  "bad": \n}\n</output>]
+  'Line 5:1: Invalid JSON schema in <output>: Expecting value (hint: Check JSON syntax inside <output>)'
+# ---
+# name: test_invalid_scl_snapshots[invalid_output_format-<identity profile="a">b</identity><output format="yaml">text</output>]
+  'Line 1:35: Invalid output format \'yaml\'; must be \'json_schema\' or \'markdown\' (hint: Use format="json_schema" or format="markdown")'
+# ---
+# name: test_invalid_scl_snapshots[invalid_variable_name-<identity profile="a">b</identity><variable name="123_bad" source="runtime.x">text</variable>]
+  "Line 1:35: Invalid variable name '123_bad'; must match regex '^[a-z_][a-z0-9_]*$'"
+# ---
+# name: test_invalid_scl_snapshots[invalid_variable_source-<identity profile="a">b</identity><variable name="v" source="runtime..bad">text</variable>]
+  "Line 1:35: Invalid variable source 'runtime..bad'; must be a dotted path"
+# ---
+# name: test_invalid_scl_snapshots[invalid_variable_type-<identity profile="a">b</identity><variable name="v" source="runtime.x" type="csv">text</variable>]
+  'Line 1:35: Invalid variable type \'csv\'; must be \'json\' or \'text\' (hint: Set type="json" or type="text")'
+# ---
+# name: test_invalid_scl_snapshots[json_schema_not_object-<identity profile="a">b</identity><output format="json_schema">"just a string"</output>]
+  'Line 1:64: JSON schema in <output> must be a JSON object (hint: Enclose schema in { ... })'
+# ---
+# name: test_invalid_scl_snapshots[mismatched_tag_identity_variable-<identity profile="a">b</variable>]
+  'Line 1:24: Mismatched closing tag: expected </identity> but found </variable> (hint: expected </identity> but found </variable>)'
+# ---
+# name: test_invalid_scl_snapshots[mismatched_tag_output_excel-<identity profile="a">b</identity><output format="markdown">text</excel>]
+  'Line 1:65: Mismatched closing tag: expected </output> but found </excel> (hint: expected </output> but found </excel>)'
+# ---
+# name: test_invalid_scl_snapshots[missing_identity_element-<variable name="x" source="runtime.x">template</variable>]
+  'Line 1:1: Missing required <identity> element (hint: Add <identity profile="...">...</identity>)'
+# ---
+# name: test_invalid_scl_snapshots[missing_identity_profile-<identity>You are a bot.</identity>]
+  'Line 1:1: Missing required attribute \'profile\' on <identity> (hint: Add profile="...")'
+# ---
+# name: test_invalid_scl_snapshots[missing_output_format-<identity profile="a">b</identity><output>text</output>]
+  'Line 1:35: Missing required attribute \'format\' on <output> (hint: Add format="json_schema" or format="markdown")'
+# ---
+# name: test_invalid_scl_snapshots[missing_variable_name-<identity profile="a">b</identity><variable source="runtime.x">text</variable>]
+  'Line 1:35: Missing required attribute \'name\' on <variable> (hint: Add name="...")'
+# ---
+# name: test_invalid_scl_snapshots[missing_variable_source-<identity profile="a">b</identity><variable name="v">text</variable>]
+  'Line 1:35: Missing required attribute \'source\' on <variable> (hint: Add source="...")'
+# ---
+# name: test_invalid_scl_snapshots[unclosed_identity_tag-<identity profile="a">unclosed]
+  'Line 1:1: Unclosed tag <identity> at EOF (hint: expected </identity>)'
+# ---
+# name: test_invalid_scl_snapshots[unclosed_scl_wrapper-<scl><identity profile="a">b</identity>]
+  'Line 1:1: Unclosed tag <scl> at EOF (hint: expected </scl>)'
+# ---
+# name: test_invalid_scl_snapshots[unexpected_text_outside-<identity profile="a">b</identity>Stray text]
+  "Line 1:35: Unexpected text outside element: 'Stray text'"
+# ---
+# name: test_invalid_scl_snapshots[unknown_attribute-<identity profile="a" unknown="value">b</identity>]
+  "Line 1:1: Unknown attribute 'unknown' on <identity> (hint: Allowed attributes: profile, tone)"
+# ---

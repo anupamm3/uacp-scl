@@ -12,3 +12,4 @@
 | D-8 | Only free providers are used by default. The OpenAI-compatible adapter makes paid providers a config change. |
 | D-9 | Whiteboard defaults to in-memory with an SQLite option. Redis is an optional backend. |
 | D-10 | In the SCL `Output` AST node, `schema` is defined as `dict[str, Any] | None = None` with the Pydantic attribute shadowing warning suppressed, preserving direct property access (`output.schema`) over Pydantic's deprecated class method. |
+| D-11 | SCL parser uses a dedicated raw-text scanning mode for `<output format="json_schema">` to permit unescaped JSON containing `<` and `>` up to the closing `</output>`. AST nodes support optional `store_spans` (default `False`), allowing clean round-trip equality `parse(format(parse(x))) == parse(x)`. |
