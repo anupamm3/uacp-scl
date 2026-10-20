@@ -1,0 +1,1 @@
+"""Abstract whiteboard backend interface."""

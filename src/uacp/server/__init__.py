@@ -1,0 +1,1 @@
+"""UACP HTTP server (FastAPI)."""

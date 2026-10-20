@@ -1,0 +1,43 @@
+# ── Model Aliases ────────────────────────────────────────────────
+# Each alias maps to a provider, a model id, and rate-limit metadata.
+#
+# ⚠  PLACEHOLDER model IDs below — replace them with current values from:
+#    • Gemini  : https://ai.google.dev/gemini-api/docs/models
+#    • Groq    : https://console.groq.com/docs/models
+#    • Ollama  : https://ollama.com/library
+#
+# The "fake" alias is used by tests and never calls a real API.
+# ──────────────────────────────────────────────────────────────────
+
+aliases:
+  alpha_default:
+    provider: gemini
+    model_id: "PLACEHOLDER_GEMINI_MODEL"      # e.g. gemini-2.0-flash
+    limits:
+      requests_per_minute: 15
+      tokens_per_minute: 1_000_000
+      daily_requests: 1500
+
+  beta_default:
+    provider: groq
+    model_id: "PLACEHOLDER_GROQ_MODEL"        # e.g. llama-3.3-70b-versatile
+    limits:
+      requests_per_minute: 30
+      tokens_per_minute: 6000
+      daily_requests: 14400
+
+  local_default:
+    provider: ollama
+    model_id: "PLACEHOLDER_OLLAMA_MODEL"      # e.g. llama3.2
+    limits:
+      requests_per_minute: 120
+      tokens_per_minute: 100_000
+      daily_requests: null                    # no cloud limit
+
+  fake:
+    provider: fake
+    model_id: "fake-echo-v1"
+    limits:
+      requests_per_minute: 999
+      tokens_per_minute: 999_999
+      daily_requests: null

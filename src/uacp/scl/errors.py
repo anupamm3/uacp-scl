@@ -1,0 +1,1 @@
+"""SCL error types."""

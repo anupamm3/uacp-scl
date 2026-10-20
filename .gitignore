@@ -1,0 +1,47 @@
+# ── Environment & secrets ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Virtual environments ──────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Python caches ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ── Build artifacts ───────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
+*.egg
+
+# ── Tool caches ───────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Databases ─────────────────────────────────────────────────────
+*.db
+*.sqlite3
+
+# ── Recorded secrets / fixtures (may contain API responses) ──────
+examples/recorded/*.json
+!examples/recorded/.gitkeep
+
+# ── IDE ───────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

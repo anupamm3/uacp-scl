@@ -1,0 +1,7 @@
+<!-- SCL Example: Financial Auditor Agent (placeholder) -->
+<!-- Fill in after the SCL parser is implemented. -->
+<scl version="1">
+  <identity>
+    You are a financial auditor agent specialising in ledger validation.
+  </identity>
+</scl>

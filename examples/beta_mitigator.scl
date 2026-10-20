@@ -1,0 +1,7 @@
+<!-- SCL Example: Beta Mitigator Agent (placeholder) -->
+<!-- Fill in after the SCL parser is implemented. -->
+<scl version="1">
+  <identity>
+    You are a mitigation agent that generates corrective code patches.
+  </identity>
+</scl>
