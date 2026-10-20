@@ -10,6 +10,13 @@ from uacp.scl.ast import (
     Variable,
     placeholders,
 )
+from uacp.scl.context import (
+    BoundDocument,
+    BoundVariable,
+    RuntimeContext,
+    bind,
+    escape_xml_data,
+)
 from uacp.scl.errors import (
     Diagnostic,
     MissingVariableError,
@@ -20,8 +27,11 @@ from uacp.scl.errors import (
 )
 from uacp.scl.lexer import Lexer, Token, TokenType, tokenize
 from uacp.scl.parser import Parser, format, parse, parse_file
+from uacp.scl.validate import validate, validate_strict
 
 __all__ = [
+    "BoundDocument",
+    "BoundVariable",
     "Diagnostic",
     "Document",
     "Example",
@@ -30,6 +40,7 @@ __all__ = [
     "MissingVariableError",
     "Output",
     "Parser",
+    "RuntimeContext",
     "SCLError",
     "SCLNode",
     "SCLSyntaxError",
@@ -38,10 +49,14 @@ __all__ = [
     "Token",
     "TokenType",
     "Variable",
+    "bind",
+    "escape_xml_data",
     "format",
     "format_source_caret",
     "parse",
     "parse_file",
     "placeholders",
     "tokenize",
+    "validate",
+    "validate_strict",
 ]

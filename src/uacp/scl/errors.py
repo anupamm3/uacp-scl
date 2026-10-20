@@ -97,26 +97,34 @@ class SCLValidationError(SCLError):
 
 
 class MissingVariableError(SCLError):
-    """Raised when a template references an undeclared variable."""
+    """Raised when a template references an undeclared variable or context key."""
 
     def __init__(
         self,
         name: str,
         line: int | None = None,
         col: int | None = None,
+        candidates: list[str] | None = None,
     ) -> None:
         self.name = name
         self.line = line
         self.col = col
+        self.candidates = candidates or []
         loc = f" at {line}:{col}" if line is not None and col is not None else ""
-        super().__init__(f"Undeclared variable '{name}' referenced{loc}")
+        hint = f" (did you mean: {', '.join(self.candidates)}?)" if self.candidates else ""
+        super().__init__(f"Undeclared variable '{name}' referenced{loc}{hint}")
 
     def format_with_source(self, source: str) -> str:
         """Render friendly message if coordinates are available."""
         if self.line is not None and self.col is not None:
             snippet = format_source_caret(source, self.line, self.col)
+            hint_str = (
+                f"\nHint: Did you mean: {', '.join(self.candidates)}?"
+                if self.candidates
+                else ""
+            )
             return (
                 f"MissingVariableError: Variable '{self.name}' was referenced but not declared.\n"
-                f"{snippet}"
+                f"{snippet}{hint_str}"
             )
         return str(self)
