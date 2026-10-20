@@ -1,0 +1,51 @@
+# serializer version: 1
+# name: test_fake_adapter_compile_snapshot
+  dict({
+    'messages': list([
+      dict({
+        'content': 'Analyze Q1',
+        'role': 'user',
+      }),
+      dict({
+        'content': 'Q1 was profitable.',
+        'role': 'assistant',
+      }),
+      dict({
+        'content': '''
+          <variable name="ledger">
+          
+              Ledger payload:
+              {"expenses": 320000, "revenue": 500000}
+            
+          </variable>
+          
+          Please evaluate the current health status.
+        ''',
+        'role': 'user',
+      }),
+    ]),
+    'model': 'fake-echo-v1',
+    'output_mode': 'native_schema',
+    'params': dict({
+    }),
+    'provider': 'fake',
+    'response_schema': dict({
+      'properties': dict({
+        'healthy': dict({
+          'type': 'boolean',
+        }),
+      }),
+      'required': list([
+        'healthy',
+      ]),
+      'type': 'object',
+    }),
+    'system': '''
+      Profile: analyst
+      
+      Tone: concise
+      
+      You evaluate financial statements.
+    ''',
+  })
+# ---

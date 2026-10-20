@@ -6,8 +6,8 @@ import json
 from typing import Any, Protocol, cast, runtime_checkable
 
 from jsonschema import Draft7Validator  # type: ignore[import-untyped]
-from pydantic import BaseModel
 
+from uacp.adapters.base import Adapter, LLMResult
 from uacp.adapters.schema_tools import extract_json
 from uacp.scl.ast import Output
 
@@ -24,19 +24,23 @@ class OutputViolation(Exception):  # noqa: N818
         return f"OutputViolation: {'; '.join(self.errors)}"
 
 
-class LLMResult(BaseModel):
-    """Minimal LLM generation result containing text content."""
-
-    content: str
-
-
 @runtime_checkable
 class LLMAdapter(Protocol):
-    """Minimal adapter protocol for LLM invocations."""
+    """Protocol for LLM adapter invocations."""
 
     async def invoke(self, request: Any) -> LLMResult:
         """Invoke the LLM with a request payload."""
         ...
+
+
+__all__ = [
+    "Adapter",
+    "LLMAdapter",
+    "LLMResult",
+    "OutputViolation",
+    "enforce",
+    "invoke_with_repair",
+]
 
 
 def enforce(output_node: Output, raw: str) -> dict[str, Any] | list[Any] | str:
@@ -112,7 +116,7 @@ def _append_repair_messages(request: Any, bad_answer: str, error_messages: list[
 
 
 async def invoke_with_repair(
-    adapter: LLMAdapter,
+    adapter: Adapter | LLMAdapter,
     request: Any,
     output_node: Output,
     max_repairs: int = 2,
@@ -135,7 +139,8 @@ async def invoke_with_repair(
 
     while True:
         result = await adapter.invoke(request)
-        raw_text = result.content if hasattr(result, "content") else str(result)
+        raw_content = getattr(result, "content", None)
+        raw_text: str = raw_content if isinstance(raw_content, str) else str(result)
 
         try:
             return enforce(output_node, raw_text)
