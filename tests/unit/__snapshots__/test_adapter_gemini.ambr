@@ -1,0 +1,105 @@
+# serializer version: 1
+# name: test_compile_financial_auditor_snapshot
+  dict({
+    'messages': list([
+      dict({
+        'content': '''
+          
+                Transaction ID: TX-1092
+                Amount: $450,000.00
+                Vendor: ACME Consultants (incorporated 3 days ago)
+                Approval: Single-signature override
+              
+        ''',
+        'role': 'user',
+      }),
+      dict({
+        'content': '''
+          
+                {
+                  "audit_complete": true,
+                  "anomalies": [
+                    {
+                      "id": "TX-1092",
+                      "batch": "BATCH-2026-Q1",
+                      "delta": -450000.0,
+                      "type": "unauthorized_disbursement",
+                      "evidence": "Vendor creation date immediately precedes large disbursement with single-signature bypass."
+                    }
+                  ]
+                }
+              
+        ''',
+        'role': 'assistant',
+      }),
+      dict({
+        'content': '''
+          <variable name="transaction_manifest">
+          
+              Target Transactions for Review:
+              "[{\"id\": \"TX-100\", \"batch\": \"B1\", \"delta\": -500.0, \"type\": \"transfer\", \"evidence\": \"Valid\"}]"
+            
+          </variable>
+          
+          Analyze ledger transactions for discrepancies.
+        ''',
+        'role': 'user',
+      }),
+    ]),
+    'model': 'gemini-2.0-flash',
+    'output_mode': 'native_schema',
+    'params': dict({
+      'temperature': 0.0,
+    }),
+    'provider': 'gemini',
+    'response_schema': dict({
+      'properties': dict({
+        'anomalies': dict({
+          'items': dict({
+            'properties': dict({
+              'batch': dict({
+                'type': 'string',
+              }),
+              'delta': dict({
+                'type': 'number',
+              }),
+              'evidence': dict({
+                'type': 'string',
+              }),
+              'id': dict({
+                'type': 'string',
+              }),
+              'type': dict({
+                'type': 'string',
+              }),
+            }),
+            'required': list([
+              'id',
+              'batch',
+              'delta',
+              'type',
+              'evidence',
+            ]),
+            'type': 'object',
+          }),
+          'type': 'array',
+        }),
+        'audit_complete': dict({
+          'type': 'boolean',
+        }),
+      }),
+      'required': list([
+        'audit_complete',
+        'anomalies',
+      ]),
+      'type': 'object',
+    }),
+    'system': '''
+      Profile: financial_auditor
+      
+      Tone: objective, meticulous
+      
+      You are a Senior Forensic Financial Auditor. Your responsibility is to analyze corporate transactions, detect anomalies, verify compliance with GAAP/IFRS standards, and highlight red flags. Maintain professional skepticism and justify every finding with evidence.
+    ''',
+  })
+# ---

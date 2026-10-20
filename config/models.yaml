@@ -12,7 +12,7 @@
 aliases:
   alpha_default:
     provider: gemini
-    model_id: "PLACEHOLDER_GEMINI_MODEL"      # e.g. gemini-2.0-flash
+    model_id: "gemini-2.0-flash"      # e.g. gemini-2.0-flash
     limits:
       requests_per_minute: 15
       tokens_per_minute: 1_000_000
@@ -20,7 +20,7 @@ aliases:
 
   beta_default:
     provider: groq
-    model_id: "PLACEHOLDER_GROQ_MODEL"        # e.g. llama-3.3-70b-versatile
+    model_id: "llama-3.3-70b-versatile"        # e.g. llama-3.3-70b-versatile
     limits:
       requests_per_minute: 30
       tokens_per_minute: 6000

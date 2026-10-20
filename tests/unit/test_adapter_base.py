@@ -363,4 +363,4 @@ def test_get_adapter_factory() -> None:
         get_adapter("non_existent_alias")
 
     with pytest.raises(NotImplementedError, match="is not implemented yet"):
-        get_adapter("alpha_default")
+        get_adapter("beta_default")

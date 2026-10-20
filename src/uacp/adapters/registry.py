@@ -194,9 +194,17 @@ class QuotaGuard:
             return
 
 
-_ADAPTER_REGISTRY: dict[str, type[Adapter]] = {
-    "fake": FakeAdapter,
-}
+def _get_default_registry() -> dict[str, type[Adapter]]:
+    """Return default adapter registry mapping."""
+    from uacp.adapters.gemini import GeminiAdapter
+
+    return {
+        "fake": FakeAdapter,
+        "gemini": GeminiAdapter,
+    }
+
+
+_ADAPTER_REGISTRY: dict[str, type[Adapter]] = _get_default_registry()
 
 
 def register_adapter(provider: str, adapter_cls: type[Adapter]) -> None:
@@ -233,5 +241,14 @@ def get_adapter(alias: str, config_path: str | Path | None = None) -> Adapter:
     adapter_cls = _ADAPTER_REGISTRY[provider]
     if adapter_cls is FakeAdapter:
         return FakeAdapter(model_id=model_config.model_id)
+
+    from uacp.adapters.gemini import GeminiAdapter
+
+    if adapter_cls is GeminiAdapter:
+        return GeminiAdapter(
+            model_id=model_config.model_id,
+            quota_guard=QuotaGuard.from_limits(model_config.limits),
+            config_path=config_path,
+        )
 
     return adapter_cls()

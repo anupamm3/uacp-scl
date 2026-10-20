@@ -154,7 +154,10 @@ class FakeAdapter(Adapter):
         if isinstance(data, list):
             script = data
         elif isinstance(data, dict):
-            script = data.get("replies", data.get("script", []))
+            raw_script = data.get("replies") or data.get("script") or []
+            if not isinstance(raw_script, list):
+                raise ValueError(f"Script content in {path} must be a list")
+            script = raw_script
         else:
             raise ValueError(f"Unexpected JSON structure in {path}: expected list or dict")
 
