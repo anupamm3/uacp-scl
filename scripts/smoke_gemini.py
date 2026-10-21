@@ -10,11 +10,8 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from pathlib import Path
 
-import dotenv
-
-from uacp.adapters.registry import get_adapter
+from uacp.adapters.registry import get_adapter, load_env
 from uacp.scl.context import RuntimeContext, bind
 from uacp.scl.parser import parse
 
@@ -37,8 +34,7 @@ TINY_SCL = """<scl version="1">
 
 async def main() -> int:
     """Execute smoke test if GEMINI_API_KEY is present."""
-    project_root = Path(__file__).resolve().parent.parent
-    dotenv.load_dotenv(project_root / ".env")
+    load_env()
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:

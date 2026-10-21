@@ -1,3 +1,39 @@
+# ── Providers Configuration ──────────────────────────────────────────
+# Default settings and capabilities per provider.
+# ──────────────────────────────────────────────────────────────────
+
+providers:
+  gemini:
+    api_key_env: "GEMINI_API_KEY"
+    capabilities:
+      supports_native_schema: true
+      supports_system_role: true
+      max_context: 1048576
+
+  groq:
+    base_url: "https://api.groq.com/openai/v1"
+    api_key_env: "GROQ_API_KEY"
+    capabilities:
+      supports_native_schema: true
+      supports_system_role: true
+      max_context: 131072
+
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    capabilities:
+      supports_native_schema: true
+      supports_system_role: true
+      max_context: 131072
+
+  ollama:
+    base_url: "http://localhost:11434/v1"
+    api_key_env: null
+    capabilities:
+      supports_native_schema: false
+      supports_system_role: true
+      max_context: 32768
+
 # ── Model Aliases ────────────────────────────────────────────────
 # Each alias maps to a provider, a model id, and rate-limit metadata.
 #
@@ -20,7 +56,7 @@ aliases:
 
   beta_default:
     provider: groq
-    model_id: "llama-3.3-70b-versatile"        # e.g. llama-3.3-70b-versatile
+    model_id: "openai/gpt-oss-20b"        # e.g. openai/gpt-oss-20b or openai/gpt-oss-120b
     limits:
       requests_per_minute: 30
       tokens_per_minute: 6000

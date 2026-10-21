@@ -24,11 +24,13 @@ from uacp.adapters.enforcer import (
     invoke_with_repair,
 )
 from uacp.adapters.fake_adapter import FakeAdapter
+from uacp.adapters.openai_compat_adapter import OpenAICompatAdapter
 from uacp.adapters.registry import (
     LimitConfig,
     ModelAliasConfig,
     QuotaGuard,
     get_adapter,
+    load_env,
     load_models_config,
     register_adapter,
 )
@@ -50,6 +52,7 @@ __all__ = [
     "Message",
     "ModelAliasConfig",
     "ModelRefusal",
+    "OpenAICompatAdapter",
     "OutputViolation",
     "ProviderError",
     "QuotaGuard",
@@ -63,6 +66,7 @@ __all__ = [
     "extract_xml_block",
     "get_adapter",
     "invoke_with_repair",
+    "load_env",
     "load_models_config",
     "normalize_schema_for",
     "register_adapter",

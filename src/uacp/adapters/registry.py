@@ -10,11 +10,40 @@ from collections.abc import Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
+import dotenv
 import yaml  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict, Field
 
-from uacp.adapters.base import Adapter, RateLimited
+from uacp.adapters.base import Adapter, AdapterCapabilities, RateLimited
 from uacp.adapters.fake_adapter import FakeAdapter
+
+_DOTENV_LOADED = False
+
+
+def load_env(env_path: str | Path | None = None) -> None:
+    """Load environment variables from .env file in one shared place.
+
+    Searches cwd and parent directories up to 4 levels unless an explicit path is provided.
+    Guarded to avoid redundant disk I/O when called repeatedly.
+    """
+    global _DOTENV_LOADED
+    if env_path is not None:
+        dotenv.load_dotenv(Path(env_path))
+        return
+
+    if not _DOTENV_LOADED:
+        cwd_env = Path.cwd() / ".env"
+        if cwd_env.is_file():
+            dotenv.load_dotenv(cwd_env)
+        else:
+            current = Path(__file__).resolve().parent
+            for _ in range(4):
+                candidate = current / ".env"
+                if candidate.is_file():
+                    dotenv.load_dotenv(candidate)
+                    break
+                current = current.parent
+        _DOTENV_LOADED = True
 
 
 class LimitConfig(BaseModel):
@@ -26,10 +55,13 @@ class LimitConfig(BaseModel):
 
 
 class ModelAliasConfig(BaseModel):
-    """Configuration mapping an alias to a provider, model ID, and limits."""
+    """Configuration mapping an alias to a provider, model ID, capabilities, and limits."""
 
     provider: str
     model_id: str
+    base_url: str | None = None
+    api_key_env: str | None = None
+    capabilities: AdapterCapabilities = Field(default_factory=AdapterCapabilities)
     limits: LimitConfig = Field(default_factory=LimitConfig)
 
     model_config = ConfigDict(protected_namespaces=())
@@ -61,6 +93,7 @@ def load_models_config(path: str | Path | None = None) -> dict[str, ModelAliasCo
     Returns:
         Mapping from alias name to ModelAliasConfig.
     """
+    load_env()
     config_file = Path(path) if path is not None else _find_default_config_path()
     if not config_file.is_file():
         raise FileNotFoundError(f"Configuration file not found: {config_file}")
@@ -68,6 +101,7 @@ def load_models_config(path: str | Path | None = None) -> dict[str, ModelAliasCo
     with open(config_file, encoding="utf-8") as f:
         raw_data = yaml.safe_load(f) or {}
 
+    providers_raw = raw_data.get("providers", {})
     aliases_raw = raw_data.get("aliases", {})
     configs: dict[str, ModelAliasConfig] = {}
 
@@ -76,10 +110,19 @@ def load_models_config(path: str | Path | None = None) -> dict[str, ModelAliasCo
         model_id = entry.get("model_id", "")
         limits_data = entry.get("limits") or {}
 
+        # Provider defaults
+        prov_data = providers_raw.get(provider, {})
+        base_url = entry.get("base_url", prov_data.get("base_url"))
+        api_key_env = entry.get("api_key_env", prov_data.get("api_key_env"))
+        caps_data = entry.get("capabilities", prov_data.get("capabilities") or {})
+        capabilities = AdapterCapabilities(**caps_data)
+
         # Environment variable overrides
         prefix = f"UACP_MODEL_{alias.upper()}_"
         provider = os.environ.get(f"{prefix}PROVIDER", provider)
         model_id = os.environ.get(f"{prefix}MODEL_ID", model_id)
+        base_url = os.environ.get(f"{prefix}BASE_URL", base_url)
+        api_key_env = os.environ.get(f"{prefix}API_KEY_ENV", api_key_env)
 
         rpm_env = os.environ.get(f"{prefix}RPM")
         requests_per_minute = (
@@ -99,6 +142,9 @@ def load_models_config(path: str | Path | None = None) -> dict[str, ModelAliasCo
         configs[alias] = ModelAliasConfig(
             provider=provider,
             model_id=model_id,
+            base_url=base_url,
+            api_key_env=api_key_env,
+            capabilities=capabilities,
             limits=LimitConfig(
                 requests_per_minute=requests_per_minute,
                 tokens_per_minute=tokens_per_minute,
@@ -194,22 +240,26 @@ class QuotaGuard:
             return
 
 
-def _get_default_registry() -> dict[str, type[Adapter]]:
-    """Return default adapter registry mapping."""
-    from uacp.adapters.gemini import GeminiAdapter
-
-    return {
-        "fake": FakeAdapter,
-        "gemini": GeminiAdapter,
-    }
-
-
-_ADAPTER_REGISTRY: dict[str, type[Adapter]] = _get_default_registry()
+_ADAPTER_REGISTRY: dict[str, type[Adapter]] = {"fake": FakeAdapter}
 
 
 def register_adapter(provider: str, adapter_cls: type[Adapter]) -> None:
     """Register an adapter class for a given provider name."""
     _ADAPTER_REGISTRY[provider] = adapter_cls
+
+
+def _resolve_adapter_cls(provider: str) -> type[Adapter] | None:
+    if provider in _ADAPTER_REGISTRY:
+        return _ADAPTER_REGISTRY[provider]
+    if provider == "gemini":
+        from uacp.adapters.gemini import GeminiAdapter
+
+        return GeminiAdapter
+    if provider in ("groq", "openrouter"):
+        from uacp.adapters.openai_compat_adapter import OpenAICompatAdapter
+
+        return OpenAICompatAdapter
+    return None
 
 
 def get_adapter(alias: str, config_path: str | Path | None = None) -> Adapter:
@@ -232,13 +282,13 @@ def get_adapter(alias: str, config_path: str | Path | None = None) -> Adapter:
 
     model_config = configs[alias]
     provider = model_config.provider
+    adapter_cls = _resolve_adapter_cls(provider)
 
-    if provider not in _ADAPTER_REGISTRY:
+    if adapter_cls is None:
         raise NotImplementedError(
             f"Provider '{provider}' for alias '{alias}' is not implemented yet"
         )
 
-    adapter_cls = _ADAPTER_REGISTRY[provider]
     if adapter_cls is FakeAdapter:
         return FakeAdapter(model_id=model_config.model_id)
 
@@ -247,6 +297,19 @@ def get_adapter(alias: str, config_path: str | Path | None = None) -> Adapter:
     if adapter_cls is GeminiAdapter:
         return GeminiAdapter(
             model_id=model_config.model_id,
+            quota_guard=QuotaGuard.from_limits(model_config.limits),
+            config_path=config_path,
+        )
+
+    from uacp.adapters.openai_compat_adapter import OpenAICompatAdapter
+
+    if issubclass(adapter_cls, OpenAICompatAdapter) or adapter_cls is OpenAICompatAdapter:
+        return OpenAICompatAdapter(
+            name=model_config.provider,
+            model_id=model_config.model_id,
+            base_url=model_config.base_url,
+            api_key_env=model_config.api_key_env,
+            capabilities=model_config.capabilities,
             quota_guard=QuotaGuard.from_limits(model_config.limits),
             config_path=config_path,
         )
