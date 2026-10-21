@@ -51,8 +51,8 @@ dev = [
 ]
 
 [project.scripts]
-scl = "uacp.cli:app"
-uacp = "uacp.cli:app"
+scl = "uacp.cli:scl_app"
+uacp = "uacp.cli:uacp_app"
 
 # ── Ruff ──────────────────────────────────────────────────────────
 [tool.ruff]
