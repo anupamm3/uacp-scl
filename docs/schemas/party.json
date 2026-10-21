@@ -1,0 +1,21 @@
+{
+  "description": "Represents an agent participant (sender or recipient).",
+  "properties": {
+    "agent_id": {
+      "description": "Unique agent identifier.",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "engine": {
+      "description": "LLM provider or engine moniker backing the agent.",
+      "title": "Engine",
+      "type": "string"
+    }
+  },
+  "required": [
+    "agent_id",
+    "engine"
+  ],
+  "title": "Party",
+  "type": "object"
+}

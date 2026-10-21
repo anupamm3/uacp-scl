@@ -1,0 +1,15 @@
+{
+  "description": "Payload querying an agent's supported intents or domain capabilities.",
+  "properties": {
+    "query": {
+      "description": "Optional list of specific capability keys queried.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Query",
+      "type": "array"
+    }
+  },
+  "title": "CapabilityQueryPayload",
+  "type": "object"
+}

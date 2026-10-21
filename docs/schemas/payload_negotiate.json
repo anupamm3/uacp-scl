@@ -1,0 +1,50 @@
+{
+  "description": "Payload for bilateral capability or parameter negotiation.",
+  "properties": {
+    "proposal": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "Proposed parameters or constraints.",
+      "title": "Proposal"
+    },
+    "constraints": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Active constraints or requirements.",
+      "title": "Constraints"
+    },
+    "round": {
+      "default": 1,
+      "description": "Negotiation round index.",
+      "minimum": 1,
+      "title": "Round",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "proposal"
+  ],
+  "title": "NegotiatePayload",
+  "type": "object"
+}

@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "JSONRPCErrorData": {
+      "description": "Structured error object inside a JSON-RPC 2.0 response.",
+      "properties": {
+        "code": {
+          "description": "Numeric error code.",
+          "title": "Code",
+          "type": "integer"
+        },
+        "message": {
+          "description": "Short textual summary of the error.",
+          "title": "Message",
+          "type": "string"
+        },
+        "data": {
+          "default": null,
+          "description": "Optional diagnostic details or payload trace.",
+          "title": "Data"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "JSONRPCErrorData",
+      "type": "object"
+    }
+  },
+  "description": "JSON-RPC 2.0 response envelope returning either result or error.",
+  "properties": {
+    "jsonrpc": {
+      "const": "2.0",
+      "default": "2.0",
+      "description": "JSON-RPC protocol version.",
+      "title": "Jsonrpc",
+      "type": "string"
+    },
+    "id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Request ID this response answers.",
+      "title": "Id"
+    },
+    "result": {
+      "default": null,
+      "description": "Success result payload, if successful.",
+      "title": "Result"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JSONRPCErrorData"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Error descriptor if request failed."
+    }
+  },
+  "title": "JSONRPCResponse",
+  "type": "object"
+}

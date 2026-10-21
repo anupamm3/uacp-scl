@@ -1,0 +1,34 @@
+{
+  "description": "Payload returning the outcome of a delegated task.",
+  "properties": {
+    "status": {
+      "description": "Execution status ('success', 'failure', 'partial').",
+      "title": "Status",
+      "type": "string"
+    },
+    "summary": {
+      "description": "Summary explanation of findings or execution.",
+      "title": "Summary",
+      "type": "string"
+    },
+    "result_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Reference key on Whiteboard or artifact location holding result data.",
+      "title": "Result Ref"
+    }
+  },
+  "required": [
+    "status",
+    "summary"
+  ],
+  "title": "TaskResultPayload",
+  "type": "object"
+}

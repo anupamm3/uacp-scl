@@ -1,0 +1,26 @@
+{
+  "description": "Payload advertising supported capabilities and metadata.",
+  "properties": {
+    "capabilities": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      ],
+      "description": "Supported capabilities list or detailed capability mapping.",
+      "title": "Capabilities"
+    }
+  },
+  "required": [
+    "capabilities"
+  ],
+  "title": "CapabilityResponsePayload",
+  "type": "object"
+}

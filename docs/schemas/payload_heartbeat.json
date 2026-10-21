@@ -1,0 +1,19 @@
+{
+  "description": "Payload for liveness and health checks.",
+  "properties": {
+    "status": {
+      "default": "ok",
+      "description": "Status string (e.g. 'ok', 'degraded').",
+      "title": "Status",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Heartbeat generation timestamp.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "title": "HeartbeatPayload",
+  "type": "object"
+}

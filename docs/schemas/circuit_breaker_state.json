@@ -1,0 +1,21 @@
+{
+  "description": "Tracks circuit-breaker hop counts across agent delegation chains.",
+  "properties": {
+    "max_hops": {
+      "default": 5,
+      "description": "Maximum hops before breaker trips.",
+      "minimum": 1,
+      "title": "Max Hops",
+      "type": "integer"
+    },
+    "current_hop": {
+      "default": 0,
+      "description": "Current hop index in delegation path.",
+      "minimum": 0,
+      "title": "Current Hop",
+      "type": "integer"
+    }
+  },
+  "title": "CircuitBreakerState",
+  "type": "object"
+}

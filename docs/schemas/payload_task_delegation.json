@@ -1,0 +1,49 @@
+{
+  "description": "Payload for delegating a task to another agent.",
+  "properties": {
+    "instruction": {
+      "description": "Task instructions and prompt context.",
+      "title": "Instruction",
+      "type": "string"
+    },
+    "whiteboard_session_ref": {
+      "description": "Whiteboard session key holding shared data context.",
+      "title": "Whiteboard Session Ref",
+      "type": "string"
+    },
+    "expected_output_schema": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional JSON Schema the recipient's output should conform to.",
+      "title": "Expected Output Schema"
+    },
+    "deadline_s": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional task execution deadline in seconds.",
+      "title": "Deadline S"
+    }
+  },
+  "required": [
+    "instruction",
+    "whiteboard_session_ref"
+  ],
+  "title": "TaskDelegationPayload",
+  "type": "object"
+}

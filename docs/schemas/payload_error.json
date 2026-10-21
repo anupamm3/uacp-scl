@@ -1,0 +1,26 @@
+{
+  "description": "Payload conveying protocol or application-level errors.",
+  "properties": {
+    "code": {
+      "description": "Numeric error code.",
+      "title": "Code",
+      "type": "integer"
+    },
+    "message": {
+      "description": "Descriptive human-readable error message.",
+      "title": "Message",
+      "type": "string"
+    },
+    "data": {
+      "default": null,
+      "description": "Optional diagnostic or trace details.",
+      "title": "Data"
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "ErrorPayload",
+  "type": "object"
+}

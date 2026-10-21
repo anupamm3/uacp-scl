@@ -1,0 +1,34 @@
+{
+  "description": "Payload for transferring session ownership or responsibility to another agent.",
+  "properties": {
+    "target_agent": {
+      "description": "Agent ID receiving responsibility.",
+      "title": "Target Agent",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Reason for initiating the handoff.",
+      "title": "Reason",
+      "type": "string"
+    },
+    "context_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Whiteboard session or hash reference holding state.",
+      "title": "Context Ref"
+    }
+  },
+  "required": [
+    "target_agent",
+    "reason"
+  ],
+  "title": "HandoffPayload",
+  "type": "object"
+}

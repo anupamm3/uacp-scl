@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "CircuitBreakerState": {
+      "description": "Tracks circuit-breaker hop counts across agent delegation chains.",
+      "properties": {
+        "max_hops": {
+          "default": 5,
+          "description": "Maximum hops before breaker trips.",
+          "minimum": 1,
+          "title": "Max Hops",
+          "type": "integer"
+        },
+        "current_hop": {
+          "default": 0,
+          "description": "Current hop index in delegation path.",
+          "minimum": 0,
+          "title": "Current Hop",
+          "type": "integer"
+        }
+      },
+      "title": "CircuitBreakerState",
+      "type": "object"
+    },
+    "Intent": {
+      "description": "Enumeration of standard UACP message intents.",
+      "enum": [
+        "task_delegation",
+        "task_result",
+        "handoff",
+        "negotiate",
+        "capability_query",
+        "capability_response",
+        "error",
+        "heartbeat"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "Party": {
+      "description": "Represents an agent participant (sender or recipient).",
+      "properties": {
+        "agent_id": {
+          "description": "Unique agent identifier.",
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "engine": {
+          "description": "LLM provider or engine moniker backing the agent.",
+          "title": "Engine",
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent_id",
+        "engine"
+      ],
+      "title": "Party",
+      "type": "object"
+    },
+    "UACPMessage": {
+      "description": "Core message model for the Unified Agent Communication Protocol (UACP).",
+      "properties": {
+        "uacp_version": {
+          "default": "1.0",
+          "description": "UACP protocol specification version.",
+          "title": "Uacp Version",
+          "type": "string"
+        },
+        "message_id": {
+          "description": "Sortable unique message identifier.",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "description": "Correlation ID shared across a multi-turn conversation or task chain.",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "description": "Distributed tracing identifier.",
+          "title": "Trace Id",
+          "type": "string"
+        },
+        "sender": {
+          "$ref": "#/$defs/Party",
+          "description": "Sender party identification."
+        },
+        "recipient": {
+          "$ref": "#/$defs/Party",
+          "description": "Recipient party identification."
+        },
+        "intent": {
+          "$ref": "#/$defs/Intent",
+          "description": "Intent of this message."
+        },
+        "payload": {
+          "additionalProperties": true,
+          "description": "Intent-specific payload payload dictionary.",
+          "title": "Payload",
+          "type": "object"
+        },
+        "circuit_breaker": {
+          "$ref": "#/$defs/CircuitBreakerState",
+          "description": "Circuit breaker hop tracking state."
+        },
+        "created_at": {
+          "description": "Timezone-aware UTC timestamp when message was created.",
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "correlation_id",
+        "trace_id",
+        "sender",
+        "recipient",
+        "intent"
+      ],
+      "title": "UACPMessage",
+      "type": "object"
+    }
+  },
+  "description": "JSON-RPC 2.0 request envelope wrapping a UACP message.",
+  "properties": {
+    "jsonrpc": {
+      "const": "2.0",
+      "default": "2.0",
+      "description": "JSON-RPC protocol version.",
+      "title": "Jsonrpc",
+      "type": "string"
+    },
+    "id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Correlation identifier for request/response pairing.",
+      "title": "Id"
+    },
+    "method": {
+      "description": "Method name in 'uacp.<intent>' format.",
+      "title": "Method",
+      "type": "string"
+    },
+    "params": {
+      "$ref": "#/$defs/UACPMessage",
+      "description": "UACPMessage object payload."
+    }
+  },
+  "required": [
+    "method",
+    "params"
+  ],
+  "title": "JSONRPCRequest",
+  "type": "object"
+}
