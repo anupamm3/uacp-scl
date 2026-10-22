@@ -254,3 +254,50 @@ sequenceDiagram
         Alpha-->>User: Final audit & mitigation report
     end
 ```
+
+---
+
+## 7. Agent Capability Discovery & Task Splitting
+
+### 7.1 Manifest & Capability Models
+
+Agent capabilities are described via two primary data structures:
+- **`Capability`**: Represents a discrete callable capability.
+  - `name` (`string`): Unique capability key.
+  - `description` (`string`): Human-readable summary.
+  - `input_schema` (`object | null`): JSON Schema for invocation inputs.
+  - `output_schema` (`object | null`): JSON Schema for results.
+  - `cost_hint` (`float`): Relative invocation or token cost estimate.
+  - `avg_latency_ms` (`float`): Typical execution latency in milliseconds.
+  - `complexity_level` (`int`, 1..5): Highest task difficulty handled well by this agent.
+  - `strengths` (`list[string]`): Tags describing core strengths (e.g., `["analysis", "code_generation"]`).
+  - `max_input_chars` (`int | null`): Input size budget, if constrained.
+- **`AgentCard`**: Advertised manifest of an agent.
+  - `agent_id` (`string`): Unique agent moniker.
+  - `engine` (`string`): Underlying LLM provider or engine alias.
+  - `role` (`string`): Agent persona or functional specialization.
+  - `current_load` (`int`): Active concurrent task count (updated dynamically).
+  - `capabilities` (`list[Capability]`): List of supported capabilities.
+  - `endpoint` (`string | null`): Optional transport network address.
+  - `version` (`string`): Agent contract version (default `"1.0"`).
+
+### 7.2 Capability Registry & Ranking
+
+The `CapabilityRegistry` maintains registered agent cards with a liveness lease governed by `HeartbeatPayload` (`default_ttl=30s`). Queries (`uacp.capability_query`) return ranked candidates evaluated across:
+1. **Strengths Match**: Agents matching the highest count of `required_strengths` rank first.
+2. **Current Load**: Agents with lower `current_load` are preferred to balance system workload.
+3. **Cost Hint**: Lowest `cost_hint` breaks load ties.
+4. **Preferred Engine**: Engine matches provide bonus priority.
+5. **Latency**: Lowest `avg_latency_ms` provides secondary optimization.
+6. **Tie-Breaker**: Lexicographical `agent_id`.
+
+Each search result includes a `reason` explaining the ranking choices for downstream planner inspection.
+
+### 7.3 Complexity-Based Task Splitting
+
+When decomposing a complex objective, `suggest_split(subtasks)` dynamically assigns subtasks based on `required_complexity` and `required_strengths`. Agents with `complexity_level < required_complexity` or expired heartbeats are excluded. Subtasks that cannot be fulfilled are marked unassigned with an explicit operational reason.
+
+### 7.4 Protocol Error Semantics
+
+If a queried capability cannot be resolved among active (non-expired) agents during `uacp.capability_query`, the registry returns JSON-RPC error code `-32002` (`CAPABILITY_NOT_FOUND`).
+
