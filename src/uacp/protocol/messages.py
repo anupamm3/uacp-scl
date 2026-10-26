@@ -46,8 +46,15 @@ class Party(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    agent_id: str = Field(..., description="Unique agent identifier.")
-    engine: str = Field(..., description="LLM provider or engine moniker backing the agent.")
+    agent_id: str = Field(default="", description="Unique agent identifier.")
+    engine: str = Field(
+        default="default",
+        description="LLM provider or engine moniker backing the agent.",
+    )
+    capability: str | None = Field(
+        default=None,
+        description="Target capability name if resolving recipient by capability.",
+    )
 
 
 class CircuitBreakerState(BaseModel):

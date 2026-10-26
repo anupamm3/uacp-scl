@@ -1,11 +1,12 @@
 """UACP — Unified Agent Communication Protocol."""
 
+from uacp.protocol.circuit_breaker import CircuitBreaker
 from uacp.protocol.jsonrpc import (
     DEFAULT_ERROR_MESSAGES,
     JSONRPCError,
     JSONRPCErrorCode,
     JSONRPCErrorData,
-    JSONRPCException,  # alias if needed, or JSONRPCError
+    JSONRPCException,
     JSONRPCRequest,
     JSONRPCResponse,
     build_error_response,
@@ -29,16 +30,21 @@ from uacp.protocol.messages import (
     generate_message_id,
     validate_payload,
 )
+from uacp.protocol.router import Router
+from uacp.protocol.transport.inproc import AgentHandler, InProcessTransport
 
 __all__ = [
     "DEFAULT_ERROR_MESSAGES",
     "INTENT_PAYLOAD_MAP",
+    "AgentHandler",
     "CapabilityQueryPayload",
     "CapabilityResponsePayload",
+    "CircuitBreaker",
     "CircuitBreakerState",
     "ErrorPayload",
     "HandoffPayload",
     "HeartbeatPayload",
+    "InProcessTransport",
     "Intent",
     "JSONRPCError",
     "JSONRPCErrorCode",
@@ -48,6 +54,7 @@ __all__ = [
     "JSONRPCResponse",
     "NegotiatePayload",
     "Party",
+    "Router",
     "TaskDelegationPayload",
     "TaskResultPayload",
     "UACPMessage",
