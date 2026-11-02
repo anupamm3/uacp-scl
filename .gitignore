@@ -45,3 +45,10 @@ examples/recorded/*.json
 # ── OS ────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── Report & Workflow Artifacts ──────────────────────────────────
+REPORT/
+REPORT
+*.pdf
+*.pptx
+

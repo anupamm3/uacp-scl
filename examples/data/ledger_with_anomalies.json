@@ -1,0 +1,542 @@
+[
+  {
+    "id": "TX-B01-0001",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-02",
+    "account": "1010-Cash",
+    "debit": 9609.43,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0002"
+  },
+  {
+    "id": "TX-B01-0002",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-02",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 9609.46,
+    "counterpart_id": "TX-B01-0001"
+  },
+  {
+    "id": "TX-B01-0003",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-03",
+    "account": "1200-AccountsReceivable",
+    "debit": 4161.69,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0004"
+  },
+  {
+    "id": "TX-B01-0004",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-03",
+    "account": "2100-AccruedLiabilities",
+    "debit": 0.0,
+    "credit": 4161.69,
+    "counterpart_id": "TX-B01-0003"
+  },
+  {
+    "id": "TX-B01-0005",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-04",
+    "account": "5300-TravelExpense",
+    "debit": 0.0,
+    "credit": 11060.24,
+    "counterpart_id": "TX-B01-0006"
+  },
+  {
+    "id": "TX-B01-0006",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-04",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 11060.24,
+    "counterpart_id": "TX-B01-0005"
+  },
+  {
+    "id": "TX-B01-0007",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-05",
+    "account": "1010-Cash",
+    "debit": 13388.08,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0008"
+  },
+  {
+    "id": "TX-B01-0009",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-06",
+    "account": "1010-Cash",
+    "debit": 6357.73,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0010"
+  },
+  {
+    "id": "TX-B01-0010",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-06",
+    "account": "2000-AccountsPayable",
+    "debit": 0.0,
+    "credit": 6357.73,
+    "counterpart_id": "TX-B01-0009"
+  },
+  {
+    "id": "TX-B01-0011",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-07",
+    "account": "5200-ConsultingFees",
+    "debit": 3318.64,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0012"
+  },
+  {
+    "id": "TX-B01-0012",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-07",
+    "account": "4100-ProductSales",
+    "debit": 0.0,
+    "credit": 3318.64,
+    "counterpart_id": "TX-B01-0011"
+  },
+  {
+    "id": "TX-B01-0013",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-08",
+    "account": "1200-AccountsReceivable",
+    "debit": 446.71,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0014"
+  },
+  {
+    "id": "TX-B01-0014",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-08",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 446.71,
+    "counterpart_id": "TX-B01-0013"
+  },
+  {
+    "id": "TX-B01-0015",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-09",
+    "account": "5200-ConsultingFees",
+    "debit": 9765.77,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0016"
+  },
+  {
+    "id": "TX-B01-0016",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-09",
+    "account": "4000-ServiceRevenue",
+    "debit": 0.0,
+    "credit": 9765.77,
+    "counterpart_id": "TX-B01-0015"
+  },
+  {
+    "id": "TX-B01-0017",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-10",
+    "account": "5200-ConsultingFees",
+    "debit": 3345.59,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0018"
+  },
+  {
+    "id": "TX-B01-0018",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-10",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 3345.59,
+    "counterpart_id": "TX-B01-0017"
+  },
+  {
+    "id": "TX-B01-0019",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-11",
+    "account": "1010-Cash",
+    "debit": 12150.99,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0020"
+  },
+  {
+    "id": "TX-B01-0020",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-11",
+    "account": "2100-AccruedLiabilities",
+    "debit": 0.0,
+    "credit": 12150.99,
+    "counterpart_id": "TX-B01-0019"
+  },
+  {
+    "id": "TX-B02-0001",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-02",
+    "account": "1500-Equipment",
+    "debit": 10487.18,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0002"
+  },
+  {
+    "id": "TX-B02-0002",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-02",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 10487.18,
+    "counterpart_id": "TX-B02-0001"
+  },
+  {
+    "id": "TX-B02-0003",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-03",
+    "account": "5400-SoftwareSubscriptions",
+    "debit": 2374.42,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0004"
+  },
+  {
+    "id": "TX-B02-0004",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-03",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 2374.42,
+    "counterpart_id": "TX-B02-0003"
+  },
+  {
+    "id": "TX-B02-0005",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-04",
+    "account": "5100-OfficeSupplies",
+    "debit": 1578.04,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0006"
+  },
+  {
+    "id": "TX-B02-0006",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-04",
+    "account": "2000-AccountsPayable",
+    "debit": 0.0,
+    "credit": 1578.04,
+    "counterpart_id": "TX-B02-0005"
+  },
+  {
+    "id": "TX-B02-0007",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-05",
+    "account": "1500-Equipment",
+    "debit": 5416.74,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0008"
+  },
+  {
+    "id": "TX-B02-0008",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-05",
+    "account": "4100-ProductSales",
+    "debit": 0.0,
+    "credit": 5416.74,
+    "counterpart_id": "TX-B02-0007"
+  },
+  {
+    "id": "TX-B02-0009",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-06",
+    "account": "1010-Cash",
+    "debit": 4004.59,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0010"
+  },
+  {
+    "id": "TX-B02-0010",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-06",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 4004.59,
+    "counterpart_id": "TX-B02-0009"
+  },
+  {
+    "id": "TX-B02-0011",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-07",
+    "account": "1010-Cash",
+    "debit": 6918.4,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0012"
+  },
+  {
+    "id": "TX-B02-0012",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-07",
+    "account": "4000-ServiceRevenue",
+    "debit": 0.0,
+    "credit": 6918.4,
+    "counterpart_id": "TX-B02-0011"
+  },
+  {
+    "id": "TX-B02-0013",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-08",
+    "account": "1500-Equipment",
+    "debit": 1228.06,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0014"
+  },
+  {
+    "id": "TX-B02-0014",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-08",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 1228.06,
+    "counterpart_id": "TX-B02-0013"
+  },
+  {
+    "id": "TX-B02-0015",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-09",
+    "account": "5400-SoftwareSubscriptions",
+    "debit": 9296.87,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0016"
+  },
+  {
+    "id": "TX-B02-0016",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-09",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 9296.87,
+    "counterpart_id": "TX-B02-0015"
+  },
+  {
+    "id": "TX-B02-0017",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-10",
+    "account": "5300-TravelExpense",
+    "debit": 8681.41,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0018"
+  },
+  {
+    "id": "TX-B02-0018",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-10",
+    "account": "2000-AccountsPayable",
+    "debit": 0.0,
+    "credit": 8681.41,
+    "counterpart_id": "TX-B02-0017"
+  },
+  {
+    "id": "TX-B02-0019",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-11",
+    "account": "1200-AccountsReceivable",
+    "debit": 735.07,
+    "credit": 0.0,
+    "counterpart_id": "TX-B02-0020"
+  },
+  {
+    "id": "TX-B02-0020",
+    "batch": "BATCH-2026-Q2",
+    "date": "2026-02-11",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 735.07,
+    "counterpart_id": "TX-B02-0019"
+  },
+  {
+    "id": "TX-B03-0001",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-02",
+    "account": "5400-SoftwareSubscriptions",
+    "debit": 14779.06,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0002"
+  },
+  {
+    "id": "TX-B03-0002",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-02",
+    "account": "2100-AccruedLiabilities",
+    "debit": 0.0,
+    "credit": 14779.06,
+    "counterpart_id": "TX-B03-0001"
+  },
+  {
+    "id": "TX-B03-0003",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-03",
+    "account": "5100-OfficeSupplies",
+    "debit": 13003.93,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0004"
+  },
+  {
+    "id": "TX-B03-0004",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-03",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 13003.93,
+    "counterpart_id": "TX-B03-0003"
+  },
+  {
+    "id": "TX-B03-0005",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-04",
+    "account": "5400-SoftwareSubscriptions",
+    "debit": 6828.48,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0006"
+  },
+  {
+    "id": "TX-B03-0006",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-04",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 6828.48,
+    "counterpart_id": "TX-B03-0005"
+  },
+  {
+    "id": "TX-B03-0007",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-05",
+    "account": "1500-Equipment",
+    "debit": 2481.68,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0008"
+  },
+  {
+    "id": "TX-B03-0008",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-05",
+    "account": "2100-AccruedLiabilities",
+    "debit": 0.0,
+    "credit": 2481.68,
+    "counterpart_id": "TX-B03-0007"
+  },
+  {
+    "id": "TX-B03-0009",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-06",
+    "account": "5300-TravelExpense",
+    "debit": 10069.12,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0010"
+  },
+  {
+    "id": "TX-B03-0010",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-06",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 10069.12,
+    "counterpart_id": "TX-B03-0009"
+  },
+  {
+    "id": "TX-B03-0011",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-07",
+    "account": "5200-ConsultingFees",
+    "debit": 9738.13,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0012"
+  },
+  {
+    "id": "TX-B03-0012",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-07",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 9738.13,
+    "counterpart_id": "TX-B03-0011"
+  },
+  {
+    "id": "TX-B03-0013",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-08",
+    "account": "5300-TravelExpense",
+    "debit": 2608.52,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0014"
+  },
+  {
+    "id": "TX-B03-0014",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-08",
+    "account": "2100-AccruedLiabilities",
+    "debit": 0.0,
+    "credit": 2608.52,
+    "counterpart_id": "TX-B03-0013"
+  },
+  {
+    "id": "TX-B03-0015",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-09",
+    "account": "5100-OfficeSupplies",
+    "debit": 2492.87,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0016"
+  },
+  {
+    "id": "TX-B03-0016",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-09",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 2492.87,
+    "counterpart_id": "TX-B03-0015"
+  },
+  {
+    "id": "TX-B03-0017",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-10",
+    "account": "5300-TravelExpense",
+    "debit": 14843.37,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0018"
+  },
+  {
+    "id": "TX-B03-0018",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-10",
+    "account": "4200-InterestIncome",
+    "debit": 0.0,
+    "credit": 14843.37,
+    "counterpart_id": "TX-B03-0017"
+  },
+  {
+    "id": "TX-B03-0019",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-11",
+    "account": "5300-TravelExpense",
+    "debit": 8376.4,
+    "credit": 0.0,
+    "counterpart_id": "TX-B03-0020"
+  },
+  {
+    "id": "TX-B03-0020",
+    "batch": "BATCH-2026-Q3",
+    "date": "2026-03-11",
+    "account": "3000-CommonStock",
+    "debit": 0.0,
+    "credit": 8376.4,
+    "counterpart_id": "TX-B03-0019"
+  },
+  {
+    "id": "TX-B01-0003",
+    "batch": "BATCH-2026-Q1",
+    "date": "2026-01-03",
+    "account": "5100-OfficeSupplies",
+    "debit": 4161.69,
+    "credit": 0.0,
+    "counterpart_id": "TX-B01-0004"
+  }
+]

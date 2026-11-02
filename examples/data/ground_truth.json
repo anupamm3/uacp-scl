@@ -1,0 +1,26 @@
+[
+  {
+    "id": "TX-B01-0002",
+    "batch": "BATCH-2026-Q1",
+    "type": "rounding_drift",
+    "delta": 0.03
+  },
+  {
+    "id": "TX-B01-0003",
+    "batch": "BATCH-2026-Q1",
+    "type": "duplicate_id",
+    "delta": 0.0
+  },
+  {
+    "id": "TX-B01-0005",
+    "batch": "BATCH-2026-Q1",
+    "type": "sign_flip",
+    "delta": 11060.24
+  },
+  {
+    "id": "TX-B01-0007",
+    "batch": "BATCH-2026-Q1",
+    "type": "missing_counterpart",
+    "delta": 13388.08
+  }
+]
