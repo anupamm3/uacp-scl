@@ -36,6 +36,13 @@ uacp_app = typer.Typer(
 )
 uacp_app.add_typer(scl_app, name="scl")
 
+run_app = typer.Typer(
+    name="run",
+    help="Execute UACP multi-agent workflows, challenges, and demos.",
+    no_args_is_help=True,
+)
+uacp_app.add_typer(run_app, name="run")
+
 # Backward compatibility alias
 app = scl_app
 
@@ -436,3 +443,89 @@ def run_cmd(
     console.print(f"[bold cyan]Input tokens:[/bold cyan] {tracker.total_input_tokens}")
     console.print(f"[bold cyan]Output tokens:[/bold cyan] {tracker.total_output_tokens}")
     console.print(f"[bold cyan]Repairs:[/bold cyan] {repairs}")
+
+
+@run_app.command("validation-challenge")
+def run_validation_challenge_cmd(
+    alpha: Annotated[
+        str,
+        typer.Option("--alpha", help="Model alias for Agent Alpha (default: 'alpha_default')"),
+    ] = "alpha_default",
+    beta: Annotated[
+        str,
+        typer.Option("--beta", help="Model alias for Agent Beta (default: 'beta_default')"),
+    ] = "beta_default",
+    backend: Annotated[
+        str,
+        typer.Option("--backend", help="Whiteboard backend: 'inmem' or 'sqlite'"),
+    ] = "inmem",
+    replay: Annotated[
+        Path | None,
+        typer.Option("--replay", help="Path to pre-recorded JSON file for offline replay"),
+    ] = None,
+    record: Annotated[
+        Path | None,
+        typer.Option("--record", help="Path to save recorded LLM interactions for later replay"),
+    ] = None,
+    offline: Annotated[
+        bool,
+        typer.Option(
+            "--offline",
+            help="Run offline using built-in recorded fixtures (no API keys or internet needed)",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Automatically confirm quota warning for live runs"),
+    ] = False,
+    metrics_out: Annotated[
+        Path | None,
+        typer.Option("--metrics-out", help="Optional path to write run metrics JSON"),
+    ] = None,
+) -> None:
+    """Execute the end-to-end multi-agent forensic validation challenge."""
+    load_env()
+    from uacp.runner.validation_challenge import run_validation_challenge
+
+    exit_code, _, _ = asyncio.run(
+        run_validation_challenge(
+            alpha_alias=alpha,
+            beta_alias=beta,
+            backend_type=backend,
+            replay_file=replay,
+            record_file=record,
+            offline=offline,
+            yes=yes,
+            metrics_out=metrics_out,
+            console=console,
+        )
+    )
+    if exit_code != 0:
+        raise typer.Exit(code=exit_code)
+
+
+@run_app.command("loop-demo")
+def run_loop_demo_cmd(
+    max_hops: Annotated[
+        int,
+        typer.Option("--max-hops", help="Circuit breaker hop ceiling (default: 5)"),
+    ] = 5,
+    backend: Annotated[
+        str,
+        typer.Option("--backend", help="Whiteboard backend: 'inmem' or 'sqlite'"),
+    ] = "inmem",
+) -> None:
+    """Demonstrate circuit breaker halting runaway multi-agent delegation at hop 5."""
+    load_env()
+    from uacp.runner.loop_demo import run_loop_demo
+
+    exit_code = asyncio.run(
+        run_loop_demo(
+            max_hops=max_hops,
+            backend_type=backend,
+            console=console,
+        )
+    )
+    if exit_code != 0:
+        raise typer.Exit(code=exit_code)
+

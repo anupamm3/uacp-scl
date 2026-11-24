@@ -206,7 +206,7 @@ async def test_alpha_whiteboard_write_and_beta_message(
     router: Router,
 ) -> None:
     """Verify findings are written to Whiteboard under 'findings.v1' and Beta is notified."""
-    session_id = "audit-session-101"
+    session_id = await whiteboard_backend.create_session(ttl_s=3600.0)
     wb_client = WhiteboardClient(backend=whiteboard_backend, session_id=session_id, author="alpha")
 
     # Register mock Beta agent to verify message reception
