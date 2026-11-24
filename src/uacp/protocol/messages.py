@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _utc_now() -> datetime:
@@ -158,12 +158,54 @@ class TaskResultPayload(BaseModel):
 class NegotiatePayload(BaseModel):
     """Payload for bilateral capability or parameter negotiation."""
 
-    proposal: dict[str, Any] | str = Field(..., description="Proposed parameters or constraints.")
+    model_config = ConfigDict(extra="ignore")
+
+    task: str = Field(default="", description="Capability name or task description.")
     constraints: dict[str, Any] | list[str] | None = Field(
         default=None,
-        description="Active constraints or requirements.",
+        description="Active constraints (deadline_s, max_tokens, required_schema, complexity).",
     )
-    round: int = Field(default=1, ge=1, description="Negotiation round index.")
+    round: int = Field(default=1, ge=1, description="Negotiation round index (1-indexed).")
+    action: str = Field(
+        default="propose",
+        description="Negotiation action: 'propose', 'accept', 'counter', 'reject'.",
+    )
+    modified_constraints: dict[str, Any] | None = Field(
+        default=None,
+        description="Revised constraints returned when action is 'counter'.",
+    )
+    reason_code: str | None = Field(
+        default=None,
+        description="Machine-readable reason code on rejection or counter.",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Human-readable explanation.",
+    )
+    whiteboard_session_ref: str | None = Field(
+        default=None,
+        description="Optional associated Whiteboard session reference.",
+    )
+    proposal: dict[str, Any] | str | None = Field(
+        default=None,
+        description="Legacy proposal object/string for backwards compatibility.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compat_negotiate(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            prop = data.get("proposal")
+            if prop is not None and not data.get("task"):
+                if isinstance(prop, dict):
+                    data["task"] = prop.get("task") or prop.get("subtask_text") or str(prop)
+                    if not data.get("constraints") and "constraints" in prop:
+                        data["constraints"] = prop["constraints"]
+                else:
+                    data["task"] = str(prop)
+            elif data.get("task") and prop is None:
+                data["proposal"] = data["task"]
+        return data
 
 
 class ErrorPayload(BaseModel):
@@ -177,12 +219,60 @@ class ErrorPayload(BaseModel):
 class HandoffPayload(BaseModel):
     """Payload for transferring session ownership or responsibility to another agent."""
 
-    target_agent: str = Field(..., description="Agent ID receiving responsibility.")
-    reason: str = Field(..., description="Reason for initiating the handoff.")
+    model_config = ConfigDict(extra="ignore")
+
+    whiteboard_session_ref: str = Field(
+        default="",
+        description="Target Whiteboard session ID holding state.",
+    )
+    last_hash: str = Field(
+        default="",
+        description="Latest Whiteboard hash chain tip to verify before acceptance.",
+    )
+    summary: str = Field(
+        default="",
+        description="Summary of work completed or context transferred.",
+    )
+    next_action: str | None = Field(
+        default=None,
+        description="Recommended next action for the new owner agent.",
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional auxiliary metadata for handoff.",
+    )
+    target_agent: str = Field(
+        default="",
+        description="Agent ID receiving responsibility.",
+    )
+    reason: str = Field(
+        default="",
+        description="Reason for initiating the handoff (aliased to summary).",
+    )
     context_ref: str | None = Field(
         default=None,
-        description="Whiteboard session or hash reference holding state.",
+        description="Whiteboard session reference (aliased to whiteboard_session_ref).",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compat_handoff(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            c_ref = data.get("context_ref")
+            w_ref = data.get("whiteboard_session_ref")
+            if c_ref and not w_ref:
+                data["whiteboard_session_ref"] = c_ref
+            elif w_ref and not c_ref:
+                data["context_ref"] = w_ref
+
+            reason = data.get("reason")
+            summary = data.get("summary")
+            if reason and not summary:
+                data["summary"] = reason
+            elif summary and not reason:
+                data["reason"] = summary
+        return data
+
 
 
 class CapabilityQueryPayload(BaseModel):

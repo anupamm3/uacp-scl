@@ -325,10 +325,89 @@ Heterogeneous agents dynamically negotiate subtask assignments by evaluating ope
 - **Circuit Breaker Integration**: Every exchange increments authoritative session hops. If the breaker trips or round limit is exceeded, negotiation terminates gracefully with an explicit `"no_agreement"` result (no uncaught exception).
 - **Whiteboard Audit Trail**: All proposals, counter-offers, reason codes, and final outcomes are persisted to the Whiteboard under `negotiation.<subtask_id>`.
 
+#### Negotiation Sequence Diagrams
+
+##### Successful Negotiation (Propose -> Counter -> Accept)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Initiator as Agent Alpha (Initiator)
+    actor Responder as Agent Beta (Responder)
+    participant WB as Whiteboard
+    participant CB as CircuitBreaker
+
+    Initiator->>CB: incr_hop(session_id) [Hop 1]
+    Initiator->>Responder: uacp.negotiate (Round 1: Propose task, constraints)
+    Responder->>Responder: Evaluate AgentCard limits (e.g. overloaded)
+    Responder->>CB: incr_hop(session_id) [Hop 2]
+    Responder-->>Initiator: uacp.negotiate (Round 1: Counter with modified_constraints)
+    Initiator->>Initiator: Evaluate counter-offer (within 2-round limit)
+    Initiator->>CB: incr_hop(session_id) [Hop 3]
+    Initiator->>Responder: uacp.negotiate (Round 2: Accept modified constraints)
+    Responder-->>Initiator: uacp.negotiate (Round 2: Acknowledged accepted)
+    Initiator->>WB: put("negotiation.<subtask_id>", outcome=agreed)
+```
+
+##### Rejected Negotiation or Round-Limit Halt
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Initiator as Agent Alpha
+    actor Responder as Agent Beta
+    participant WB as Whiteboard
+    participant CB as CircuitBreaker
+
+    alt Missing Capability or Infeasible Constraints
+        Initiator->>CB: incr_hop(session_id) [Hop 1]
+        Initiator->>Responder: uacp.negotiate (Round 1: Propose unknown task)
+        Responder->>Responder: Inspect AgentCard (Capability missing / complexity gap > 1)
+        Responder-->>Initiator: uacp.negotiate (Round 1: Reject, reason="CAPABILITY_NOT_FOUND")
+        Initiator->>WB: put("negotiation.<subtask_id>", outcome=rejected)
+    else Exceeding Maximum Rounds (Max 2 Rounds)
+        Initiator->>Responder: uacp.negotiate (Round 2: Counter offer)
+        Responder->>Responder: Check round_num > max_rounds (2)
+        Responder-->>Initiator: uacp.negotiate (Action="no_agreement", reason="MAX_ROUNDS_REACHED")
+        Initiator->>WB: put("negotiation.<subtask_id>", outcome=no_agreement)
+    end
+```
+
 ### 8.2 Session Handoff & Observer Invariants (`uacp.handoff`)
 
 When transferring primary session control between agents:
-1. **Cryptographic Integrity Verification**: The recipient verifies the session hash chain (`verify_chain`) before accepting. If state or event tampering is detected, the handoff is rejected (`TamperDetected`).
-2. **Observer Write Restriction**: Upon transferring ownership, the originating agent transitions to observer mode (`is_observer=True`). The observer agent's Whiteboard access is locked to read-only; any subsequent write attempts (`put`, `write_model`, `run_llm`) raise `PermissionError`.
+1. **Cryptographic Integrity Verification**: The recipient verifies the session hash chain (`verify_chain`) AND confirms the latest chain tip matches `last_hash`. If state or event tampering is detected or hash mismatches, the handoff is rejected (`TamperDetected` or `rejected`).
+2. **Ownership Transfer Event**: Upon successful verification, the recipient records a `"session.handoff"` event on the Whiteboard documenting previous owner, new owner, and metadata.
+3. **Observer Write Restriction**: Upon transferring ownership, the originating agent transitions to observer mode (`is_observer=True` and registered in session `observers`). Both the agent client and backend enforce read-only access; any subsequent write attempts (`put`, `write_model`, `run_llm`) raise `ObserverWriteError` / `PermissionError`.
+
+#### Task Handoff Sequence Diagram
+```mermaid
+sequenceDiagram
+    autonumber
+    actor PrevOwner as Previous Owner (Agent Alpha)
+    actor NewOwner as New Owner (Agent Beta)
+    participant WB as Whiteboard Backend
+
+    PrevOwner->>WB: get_latest_hash(session_id)
+    WB-->>PrevOwner: return last_hash
+    PrevOwner->>NewOwner: uacp.handoff (session_ref, last_hash, summary)
+    PrevOwner->>PrevOwner: set_observer(True)
+    
+    NewOwner->>WB: verify_chain(session_id)
+    WB-->>NewOwner: VerificationReport(is_valid)
+    NewOwner->>WB: get_latest_hash(session_id)
+    WB-->>NewOwner: current_tip
+
+    alt Valid Chain & Tip Matches last_hash
+        NewOwner->>WB: append_event("session.handoff", prev=Alpha, new=Beta)
+        NewOwner->>WB: add_observer(session_id, "agent_alpha")
+        NewOwner-->>PrevOwner: task_result(status="success", summary="Handoff accepted")
+        Note over PrevOwner,WB: Observer Write Protection Active
+        PrevOwner-xWB: put(session_id, key, val) -> BLOCKED (ObserverWriteError)
+    else Tampered Chain or Tip Mismatch
+        NewOwner->>WB: append_event("session.handoff.rejected", reason)
+        NewOwner-->>PrevOwner: task_result(status="rejected", is_valid=False)
+        Note over PrevOwner,NewOwner: Ownership NOT transferred
+    end
+```
+
 
 

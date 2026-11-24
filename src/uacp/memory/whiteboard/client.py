@@ -136,7 +136,24 @@ class WhiteboardClient:
         """Verify hash chain and state integrity for current session."""
         return await self.backend.verify_chain(self.session_id)
 
+    async def add_observer(self, agent_id: str) -> None:
+        """Mark an agent as an observer for this session."""
+        await self.backend.add_observer(self.session_id, agent_id)
+
+    async def is_observer(self, agent_id: str) -> bool:
+        """Check if an agent is an observer for this session."""
+        return await self.backend.is_observer(self.session_id, agent_id)
+
+    async def get_observers(self) -> set[str]:
+        """Return the set of all observer agent IDs for this session."""
+        return await self.backend.get_observers(self.session_id)
+
+    async def get_latest_hash(self) -> str:
+        """Return the latest state hash for this session."""
+        return await self.backend.get_latest_hash(self.session_id)
+
     async def close(self) -> None:
+
         """Close current session."""
         await self.backend.close(self.session_id)
 

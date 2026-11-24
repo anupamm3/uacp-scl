@@ -19,6 +19,7 @@ from uacp.memory.whiteboard.base import (
     ClockFn,
     DriftReport,
     KeyDriftSummary,
+    ObserverWriteError,
     ReviewRecord,
     ReviewVerdict,
     SessionExpired,
@@ -46,7 +47,9 @@ class _SessionData:
     state: dict[str, StateEntry] = field(default_factory=dict)
     events: list[WhiteboardEvent] = field(default_factory=list)
     reviews: list[ReviewRecord] = field(default_factory=list)
+    observers: set[str] = field(default_factory=set)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
 
 
 class InMemoryWhiteboardBackend(WhiteboardBackend):
@@ -104,6 +107,10 @@ class InMemoryWhiteboardBackend(WhiteboardBackend):
         session = self._get_session(session_id)
         async with session.lock:
             self._check_active_session(session)
+            if author in session.observers:
+                raise ObserverWriteError(
+                    f"Agent '{author}' is an observer on session '{session_id}' and cannot write."
+                )
             current_entry = session.state.get(key)
             if current_entry is not None:
                 if expected_version is not None and expected_version != current_entry.version:
@@ -331,3 +338,30 @@ class InMemoryWhiteboardBackend(WhiteboardBackend):
                 events_verified=len(write_events),
                 details="Hash chain and current state integrity verified successfully.",
             )
+
+    async def add_observer(self, session_id: str, agent_id: str) -> None:
+        """Mark an agent as an observer for a session (blocking write operations)."""
+        session = self._get_session(session_id)
+        async with session.lock:
+            self._check_active_session(session)
+            session.observers.add(agent_id)
+
+    async def is_observer(self, session_id: str, agent_id: str) -> bool:
+        """Check if an agent is recorded as an observer for a session."""
+        session = self._get_session(session_id)
+        async with session.lock:
+            return agent_id in session.observers
+
+    async def get_observers(self, session_id: str) -> set[str]:
+        """Return the set of all observer agent IDs for a session."""
+        session = self._get_session(session_id)
+        async with session.lock:
+            return set(session.observers)
+
+    async def get_latest_hash(self, session_id: str) -> str:
+        """Return the latest state hash in the session's hash chain."""
+        session = self._get_session(session_id)
+        async with session.lock:
+            write_events = [e for e in session.events if e.state_hash]
+            return write_events[-1].hash if write_events else "0" * 64
+

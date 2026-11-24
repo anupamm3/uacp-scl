@@ -11,10 +11,12 @@ from uacp.adapters.enforcer import invoke_with_repair
 from uacp.memory.whiteboard.base import WhiteboardBackend
 from uacp.memory.whiteboard.client import WhiteboardClient
 from uacp.protocol.capabilities import AgentCard, Capability, CapabilityRegistry, build_agent_card
+from uacp.protocol.handoff import verify_and_accept_handoff
 from uacp.protocol.jsonrpc import JSONRPCRequest, JSONRPCResponse
 from uacp.protocol.messages import (
     HandoffPayload,
     Intent,
+    NegotiatePayload,
     Party,
     TaskDelegationPayload,
     TaskResultPayload,
@@ -449,6 +451,7 @@ class Agent:
         """Return negotiation context containing complexity level, strengths, and current load."""
         max_comp = 1
         all_strengths: list[str] = []
+        cap_names: list[str] = [c.name for c in self.capabilities]
         for cap in self.capabilities:
             if cap.complexity_level > max_comp:
                 max_comp = cap.complexity_level
@@ -461,6 +464,8 @@ class Agent:
             complexity_level=max_comp,
             strengths=all_strengths,
             current_load=self.current_load,
+            capabilities=cap_names,
+            card=self.card,
         )
 
     def set_observer(self, is_observer: bool = True) -> None:
@@ -475,45 +480,58 @@ class Agent:
 
     async def handle_negotiate(self, message: UACPMessage) -> UACPMessage:
         """Handle incoming bilateral task negotiation proposal or counter-offer."""
-        raw_proposal = message.payload.get("proposal", {})
-        round_num = int(message.payload.get("round", 1))
+        raw_payload = message.payload
+        round_num = int(raw_payload.get("round", 1))
 
-        if isinstance(raw_proposal, dict):
-            # Check if this is already a decision or a proposal
-            if "subtask_text" in raw_proposal:
-                proposal = NegotiationProposal.model_validate(raw_proposal)
-            elif "action" in raw_proposal:
-                # Responder got counter decision from initiator
-                return await self.handle_default(message)
-            else:
-                proposal = NegotiationProposal.model_validate(raw_proposal)
-        elif isinstance(raw_proposal, NegotiationProposal):
-            proposal = raw_proposal
-        else:
-            decision = NegotiationDecision(
-                action=NegotiationAction.reject,
-                reason_code="INVALID_PROPOSAL",
-                reason="Invalid proposal payload format",
-                round=round_num,
-            )
-            return self._build_negotiation_reply(message, decision, round_num)
+        action_val = raw_payload.get("action")
+        if action_val in (
+            NegotiationAction.accept.value,
+            NegotiationAction.reject.value,
+            NegotiationAction.no_agreement.value,
+        ):
+            return await self.handle_default(message)
 
         context = self.get_negotiation_context()
-        decision = self.negotiation_policy.evaluate(proposal, context, round_num=round_num)
-        return self._build_negotiation_reply(message, decision, round_num)
+        proposal_input: Any
+        raw_proposal = raw_payload.get("proposal")
+        if (
+            raw_proposal is not None
+            and isinstance(raw_proposal, dict)
+            and "subtask_text" in raw_proposal
+        ):
+            proposal_input = NegotiationProposal.model_validate(raw_proposal)
+        else:
+            proposal_input = NegotiatePayload.model_validate(raw_payload)
+
+        decision = self.negotiation_policy.evaluate(proposal_input, context, round_num=round_num)
+        task_str = getattr(proposal_input, "task", "") or (
+            proposal_input.subtask_text if isinstance(proposal_input, NegotiationProposal) else ""
+        )
+        return self._build_negotiation_reply(message, decision, round_num, task=task_str)
 
     def _build_negotiation_reply(
         self,
         message: UACPMessage,
         decision: NegotiationDecision,
         round_num: int,
+        task: str = "",
     ) -> UACPMessage:
         """Build UACPMessage response carrying negotiation decision."""
         engine = self.card.engine if self.card else "default"
-        payload_data = {
-            "proposal": decision.model_dump(),
-            "decision": decision.model_dump(),
+        session_id = message.payload.get("whiteboard_session_ref") or message.correlation_id
+        payload_data: dict[str, Any] = {
+            "task": task or (decision.proposal.subtask_text if decision.proposal else ""),
+            "action": decision.action.value,
             "round": round_num,
+            "modified_constraints": decision.modified_constraints
+            or (decision.proposal.model_dump() if decision.proposal else None),
+            "reason_code": decision.reason_code,
+            "reason": decision.reason,
+            "whiteboard_session_ref": session_id,
+            "proposal": (
+                decision.proposal.model_dump() if decision.proposal else decision.model_dump()
+            ),
+            "decision": decision.model_dump(),
         }
         return UACPMessage(
             correlation_id=message.correlation_id,
@@ -534,17 +552,27 @@ class Agent:
         return self.negotiation_policy.evaluate(counter_proposal, context, round_num=round_num)
 
     async def handle_handoff(self, message: UACPMessage) -> UACPMessage:
-        """Handle incoming session handoff, verifying state integrity first."""
+        """Handle incoming session handoff, verifying state integrity and chain tip."""
         payload = HandoffPayload.model_validate(message.payload)
+        session_id = payload.whiteboard_session_ref or message.correlation_id
 
-        # Verify hash chain integrity if Whiteboard is available
+        backend: WhiteboardBackend | None = None
+        if self.whiteboard is not None:
+            backend = self.whiteboard.backend
+        elif self.router is not None:
+            backend = self.router.whiteboard
+
         is_valid = True
         verification_details = "Verified"
-        if self.whiteboard is not None:
+        if backend is not None and session_id:
             try:
-                report = await self.whiteboard.verify_chain()
-                is_valid = report.is_valid
-                verification_details = report.details
+                is_valid, verification_details = await verify_and_accept_handoff(
+                    whiteboard=backend,
+                    session_id=session_id,
+                    previous_owner=message.sender.agent_id,
+                    new_owner=self.agent_id,
+                    payload=payload,
+                )
             except Exception as e:
                 is_valid = False
                 verification_details = f"Verification error: {e}"
@@ -560,8 +588,8 @@ class Agent:
                 intent=Intent.task_result,
                 payload={
                     "status": "rejected",
-                    "summary": f"Handoff rejected: TamperDetected ({verification_details})",
-                    "result_ref": payload.context_ref,
+                    "summary": f"Handoff rejected: {verification_details}",
+                    "result_ref": payload.whiteboard_session_ref,
                     "is_valid": False,
                 },
             )
@@ -574,8 +602,8 @@ class Agent:
             intent=Intent.task_result,
             payload={
                 "status": "success",
-                "summary": f"Handoff accepted: {payload.reason}",
-                "result_ref": payload.context_ref,
+                "summary": f"Handoff accepted: {payload.summary or payload.reason}",
+                "result_ref": payload.whiteboard_session_ref,
                 "is_valid": True,
             },
         )
@@ -592,10 +620,19 @@ class Agent:
             raise ValueError(f"Agent '{self.agent_id}' has no router configured for handoff.")
 
         sid = session_id or (self.whiteboard.session_id if self.whiteboard else "default")
+        last_hash = ""
+        if self.router is not None and self.router.whiteboard is not None:
+            last_hash = await self.router.whiteboard.get_latest_hash(sid)
+        elif self.whiteboard is not None:
+            last_hash = await self.whiteboard.get_latest_hash()
+
         payload = HandoffPayload(
+            whiteboard_session_ref=sid,
+            last_hash=last_hash,
+            summary=reason,
             target_agent=target_agent_id,
             reason=reason,
-            context_ref=context_ref,
+            context_ref=context_ref or sid,
         )
         engine = self.card.engine if self.card else "default"
         msg = UACPMessage(
@@ -611,6 +648,7 @@ class Agent:
         # On initiating handoff, caller transitions to observer (read-only)
         self.set_observer(True)
         return response
+
 
     async def negotiate(
         self,

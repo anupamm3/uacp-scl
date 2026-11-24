@@ -62,6 +62,11 @@ class TamperError(WhiteboardError):
     """Raised when hash chain or state tampering is detected."""
 
 
+class ObserverWriteError(PermissionError, WhiteboardError):
+    """Raised when an agent registered as an observer attempts to write to a session."""
+
+
+
 # ── Models ───────────────────────────────────────────────────────────────
 
 
@@ -331,3 +336,20 @@ class WhiteboardBackend(abc.ABC):
         Raises:
             SessionExpired: If the session has expired, is closed, or does not exist.
         """
+
+    @abc.abstractmethod
+    async def add_observer(self, session_id: str, agent_id: str) -> None:
+        """Mark an agent as an observer for a session (blocking write operations)."""
+
+    @abc.abstractmethod
+    async def is_observer(self, session_id: str, agent_id: str) -> bool:
+        """Check if an agent is recorded as an observer for a session."""
+
+    @abc.abstractmethod
+    async def get_observers(self, session_id: str) -> set[str]:
+        """Return the set of all observer agent IDs for a session."""
+
+    @abc.abstractmethod
+    async def get_latest_hash(self, session_id: str) -> str:
+        """Return the latest state hash in the session's hash chain."""
+

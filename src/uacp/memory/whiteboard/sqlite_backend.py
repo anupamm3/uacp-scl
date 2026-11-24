@@ -22,6 +22,7 @@ from uacp.memory.whiteboard.base import (
     ClockFn,
     DriftReport,
     KeyDriftSummary,
+    ObserverWriteError,
     ReviewRecord,
     ReviewVerdict,
     SessionExpired,
@@ -100,6 +101,13 @@ class SqliteWhiteboardBackend(WhiteboardBackend):
                         created_at TEXT NOT NULL,
                         FOREIGN KEY (session_id) REFERENCES sessions (session_id)
                     );
+
+                    CREATE TABLE IF NOT EXISTS observers (
+                        session_id TEXT NOT NULL,
+                        agent_id TEXT NOT NULL,
+                        PRIMARY KEY (session_id, agent_id),
+                        FOREIGN KEY (session_id) REFERENCES sessions (session_id)
+                    );
                     """
             )
 
@@ -161,6 +169,15 @@ class SqliteWhiteboardBackend(WhiteboardBackend):
         with self._lock, self._conn:
             cursor = self._conn.cursor()
             self._check_session_sync(cursor, session_id, now)
+
+            cursor.execute(
+                "SELECT 1 FROM observers WHERE session_id = ? AND agent_id = ?",
+                (session_id, author),
+            )
+            if cursor.fetchone() is not None:
+                raise ObserverWriteError(
+                    f"Agent '{author}' is an observer on session '{session_id}' and cannot write."
+                )
 
             cursor.execute(
                 "SELECT version FROM state WHERE session_id = ? AND key = ?",
@@ -495,6 +512,45 @@ class SqliteWhiteboardBackend(WhiteboardBackend):
                 details="Hash chain and current state integrity verified successfully.",
             )
 
+    def _add_observer_sync(self, session_id: str, agent_id: str, now: float) -> None:
+        with self._lock, self._conn:
+            cursor = self._conn.cursor()
+            self._check_session_sync(cursor, session_id, now)
+            cursor.execute(
+                "INSERT OR IGNORE INTO observers (session_id, agent_id) VALUES (?, ?)",
+                (session_id, agent_id),
+            )
+
+    def _is_observer_sync(self, session_id: str, agent_id: str) -> bool:
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM observers WHERE session_id = ? AND agent_id = ?",
+                (session_id, agent_id),
+            )
+            return cursor.fetchone() is not None
+
+    def _get_observers_sync(self, session_id: str) -> set[str]:
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute(
+                "SELECT agent_id FROM observers WHERE session_id = ?",
+                (session_id,),
+            )
+            return {r[0] for r in cursor.fetchall()}
+
+    def _get_latest_hash_sync(self, session_id: str) -> str:
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute(
+                "SELECT hash FROM events WHERE session_id = ? AND state_hash != '' "
+                "ORDER BY event_id DESC LIMIT 1",
+                (session_id,),
+            )
+            row = cursor.fetchone()
+            return str(row[0]) if row else "0" * 64
+
+
     # ── Asynchronous public interface ───────────────────────────────────
 
     async def create_session(self, ttl_s: float, max_hops: int = 5) -> str:
@@ -556,6 +612,19 @@ class SqliteWhiteboardBackend(WhiteboardBackend):
 
     async def verify_chain(self, session_id: str) -> VerificationReport:
         return await asyncio.to_thread(self._verify_chain_sync, session_id, self.clock())
+
+    async def add_observer(self, session_id: str, agent_id: str) -> None:
+        await asyncio.to_thread(self._add_observer_sync, session_id, agent_id, self.clock())
+
+    async def is_observer(self, session_id: str, agent_id: str) -> bool:
+        return await asyncio.to_thread(self._is_observer_sync, session_id, agent_id)
+
+    async def get_observers(self, session_id: str) -> set[str]:
+        return await asyncio.to_thread(self._get_observers_sync, session_id)
+
+    async def get_latest_hash(self, session_id: str) -> str:
+        return await asyncio.to_thread(self._get_latest_hash_sync, session_id)
+
 
     def close_db(self) -> None:
         """Close database connection."""
