@@ -301,3 +301,34 @@ When decomposing a complex objective, `suggest_split(subtasks)` dynamically assi
 
 If a queried capability cannot be resolved among active (non-expired) agents during `uacp.capability_query`, the registry returns JSON-RPC error code `-32002` (`CAPABILITY_NOT_FOUND`).
 
+---
+
+## 8. Bilateral Task Negotiation & Session Handoff
+
+### 8.1 Task Difficulty Negotiation (`uacp.negotiate`)
+
+Heterogeneous agents dynamically negotiate subtask assignments by evaluating operational feasibility and difficulty:
+- **`NegotiationProposal`**:
+  - `subtask_id` (`string`): Unique identifier for the subtask.
+  - `subtask_text` (`string`): Human/agent actionable task description.
+  - `difficulty` (`int`, 1..5): Task complexity score.
+  - `required_strengths` (`list[string]`): Desired functional capabilities.
+  - `deadline_s` (`float`): Execution budget in seconds.
+  - `token_budget` (`int`): Token allowance for LLM reasoning and repair.
+- **Actions & Decisions**: Responding agents evaluate proposals and return `accept`, `counter`, or `reject` paired with explicit reason codes (`NegotiationDecision`).
+- **Negotiation Policy**:
+  - Each agent implements a pluggable `NegotiationPolicy` class.
+  - **Default Policy (`DefaultNegotiationPolicy`)**:
+    - **Accept**: Receiver's `complexity_level >= proposed difficulty`, required strengths overlap with its own, and `current_load < max_load`.
+    - **Counter**: Task is feasible with relaxed constraints (extended deadline, higher token budget, or difficulty adjusted by at most $\pm 1$ level per round with documented reason). Maximum 2 rounds.
+    - **Reject**: Agent cannot perform the task (e.g. zero strength overlap or complexity gap $> 1$), returning an explicit reason code.
+- **Circuit Breaker Integration**: Every exchange increments authoritative session hops. If the breaker trips or round limit is exceeded, negotiation terminates gracefully with an explicit `"no_agreement"` result (no uncaught exception).
+- **Whiteboard Audit Trail**: All proposals, counter-offers, reason codes, and final outcomes are persisted to the Whiteboard under `negotiation.<subtask_id>`.
+
+### 8.2 Session Handoff & Observer Invariants (`uacp.handoff`)
+
+When transferring primary session control between agents:
+1. **Cryptographic Integrity Verification**: The recipient verifies the session hash chain (`verify_chain`) before accepting. If state or event tampering is detected, the handoff is rejected (`TamperDetected`).
+2. **Observer Write Restriction**: Upon transferring ownership, the originating agent transitions to observer mode (`is_observer=True`). The observer agent's Whiteboard access is locked to read-only; any subsequent write attempts (`put`, `write_model`, `run_llm`) raise `PermissionError`.
+
+

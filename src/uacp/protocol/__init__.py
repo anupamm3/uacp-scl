@@ -30,6 +30,17 @@ from uacp.protocol.messages import (
     generate_message_id,
     validate_payload,
 )
+from uacp.protocol.negotiation import (
+    AgentNegotiationContext,
+    DefaultNegotiationPolicy,
+    NegotiationAction,
+    NegotiationDecision,
+    NegotiationOutcome,
+    NegotiationPolicy,
+    NegotiationProposal,
+    execute_negotiation,
+    record_negotiation_outcome,
+)
 from uacp.protocol.router import Router
 from uacp.protocol.transport.inproc import AgentHandler, InProcessTransport
 
@@ -37,10 +48,12 @@ __all__ = [
     "DEFAULT_ERROR_MESSAGES",
     "INTENT_PAYLOAD_MAP",
     "AgentHandler",
+    "AgentNegotiationContext",
     "CapabilityQueryPayload",
     "CapabilityResponsePayload",
     "CircuitBreaker",
     "CircuitBreakerState",
+    "DefaultNegotiationPolicy",
     "ErrorPayload",
     "HandoffPayload",
     "HeartbeatPayload",
@@ -53,6 +66,11 @@ __all__ = [
     "JSONRPCRequest",
     "JSONRPCResponse",
     "NegotiatePayload",
+    "NegotiationAction",
+    "NegotiationDecision",
+    "NegotiationOutcome",
+    "NegotiationPolicy",
+    "NegotiationProposal",
     "Party",
     "Router",
     "TaskDelegationPayload",
@@ -60,7 +78,9 @@ __all__ = [
     "UACPMessage",
     "build_error_response",
     "build_response",
+    "execute_negotiation",
     "generate_message_id",
     "parse_request",
+    "record_negotiation_outcome",
     "validate_payload",
 ]

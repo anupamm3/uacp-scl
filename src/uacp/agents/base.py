@@ -11,13 +11,24 @@ from uacp.adapters.enforcer import invoke_with_repair
 from uacp.memory.whiteboard.base import WhiteboardBackend
 from uacp.memory.whiteboard.client import WhiteboardClient
 from uacp.protocol.capabilities import AgentCard, Capability, CapabilityRegistry, build_agent_card
-from uacp.protocol.jsonrpc import JSONRPCRequest
+from uacp.protocol.jsonrpc import JSONRPCRequest, JSONRPCResponse
 from uacp.protocol.messages import (
+    HandoffPayload,
     Intent,
     Party,
     TaskDelegationPayload,
     TaskResultPayload,
     UACPMessage,
+)
+from uacp.protocol.negotiation import (
+    AgentNegotiationContext,
+    DefaultNegotiationPolicy,
+    NegotiationAction,
+    NegotiationDecision,
+    NegotiationOutcome,
+    NegotiationPolicy,
+    NegotiationProposal,
+    execute_negotiation,
 )
 from uacp.protocol.router import Router
 from uacp.scl.ast import Output as SCLOutput
@@ -62,6 +73,28 @@ class TrackingAdapterWrapper:
         return result
 
 
+class ReadOnlyWhiteboardClient:
+    """Read-only proxy wrapping WhiteboardClient to prevent observer writes."""
+
+    def __init__(self, inner: WhiteboardClient) -> None:
+        self._inner = inner
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    async def put(self, *args: Any, **kwargs: Any) -> Any:
+        raise PermissionError("Observer agent cannot write to Whiteboard after handoff.")
+
+    async def write_model(self, *args: Any, **kwargs: Any) -> Any:
+        raise PermissionError("Observer agent cannot write to Whiteboard after handoff.")
+
+    async def incr_hop(self, *args: Any, **kwargs: Any) -> Any:
+        raise PermissionError("Observer agent cannot write to Whiteboard after handoff.")
+
+    async def add_review(self, *args: Any, **kwargs: Any) -> Any:
+        raise PermissionError("Observer agent cannot write to Whiteboard after handoff.")
+
+
 class Agent:
     """Base class for all UACP autonomous agents.
 
@@ -82,6 +115,7 @@ class Agent:
         card: AgentCard | None = None,
         capabilities: list[Capability] | None = None,
         current_load: int = 0,
+        negotiation_policy: NegotiationPolicy | None = None,
     ) -> None:
         """Initialize the Agent.
 
@@ -94,6 +128,7 @@ class Agent:
             card: Optional pre-constructed AgentCard manifest.
             capabilities: Optional list of capabilities. Defaults to class-level abilities.
             current_load: Initial task load on the agent (default 0).
+            negotiation_policy: Optional custom policy for task difficulty negotiation.
         """
         self.agent_id = agent_id
         self.scl_path = Path(scl_path) if scl_path is not None else None
@@ -102,6 +137,10 @@ class Agent:
         self.router = router
         self.registry: CapabilityRegistry | None = None
         self.current_load = current_load
+        self.negotiation_policy: NegotiationPolicy = (
+            negotiation_policy if negotiation_policy is not None else DefaultNegotiationPolicy()
+        )
+        self.is_observer: bool = False
 
         # Capabilities defined in one centralized place
         self.capabilities: list[Capability] = (
@@ -214,6 +253,9 @@ class Agent:
         Raises:
             ValueError: If agent has no SCL path or adapter configured.
         """
+        if self.is_observer:
+            raise PermissionError("Observer agent cannot write to Whiteboard after handoff.")
+
         if self.scl_path is None:
             raise ValueError(f"Agent '{self.agent_id}' has no scl_path configured.")
         if self.adapter is None:
@@ -308,6 +350,10 @@ class Agent:
                 return await self.handle_capability_query(message)
             case Intent.task_result:
                 return await self.handle_task_result(message)
+            case Intent.negotiate:
+                return await self.handle_negotiate(message)
+            case Intent.handoff:
+                return await self.handle_handoff(message)
             case _:
                 return await self.handle_default(message)
 
@@ -397,6 +443,194 @@ class Agent:
             recipient=message.sender,
             intent=Intent.task_result,
             payload={"status": "acknowledged"},
+        )
+
+    def get_negotiation_context(self) -> AgentNegotiationContext:
+        """Return negotiation context containing complexity level, strengths, and current load."""
+        max_comp = 1
+        all_strengths: list[str] = []
+        for cap in self.capabilities:
+            if cap.complexity_level > max_comp:
+                max_comp = cap.complexity_level
+            for s in cap.strengths:
+                if s not in all_strengths:
+                    all_strengths.append(s)
+
+        return AgentNegotiationContext(
+            agent_id=self.agent_id,
+            complexity_level=max_comp,
+            strengths=all_strengths,
+            current_load=self.current_load,
+        )
+
+    def set_observer(self, is_observer: bool = True) -> None:
+        """Set agent to observer mode (read-only whiteboard access)."""
+        self.is_observer = is_observer
+        if (
+            is_observer
+            and self.whiteboard is not None
+            and not isinstance(self.whiteboard, ReadOnlyWhiteboardClient)
+        ):
+            self.whiteboard = ReadOnlyWhiteboardClient(self.whiteboard)  # type: ignore[assignment]
+
+    async def handle_negotiate(self, message: UACPMessage) -> UACPMessage:
+        """Handle incoming bilateral task negotiation proposal or counter-offer."""
+        raw_proposal = message.payload.get("proposal", {})
+        round_num = int(message.payload.get("round", 1))
+
+        if isinstance(raw_proposal, dict):
+            # Check if this is already a decision or a proposal
+            if "subtask_text" in raw_proposal:
+                proposal = NegotiationProposal.model_validate(raw_proposal)
+            elif "action" in raw_proposal:
+                # Responder got counter decision from initiator
+                return await self.handle_default(message)
+            else:
+                proposal = NegotiationProposal.model_validate(raw_proposal)
+        elif isinstance(raw_proposal, NegotiationProposal):
+            proposal = raw_proposal
+        else:
+            decision = NegotiationDecision(
+                action=NegotiationAction.reject,
+                reason_code="INVALID_PROPOSAL",
+                reason="Invalid proposal payload format",
+                round=round_num,
+            )
+            return self._build_negotiation_reply(message, decision, round_num)
+
+        context = self.get_negotiation_context()
+        decision = self.negotiation_policy.evaluate(proposal, context, round_num=round_num)
+        return self._build_negotiation_reply(message, decision, round_num)
+
+    def _build_negotiation_reply(
+        self,
+        message: UACPMessage,
+        decision: NegotiationDecision,
+        round_num: int,
+    ) -> UACPMessage:
+        """Build UACPMessage response carrying negotiation decision."""
+        engine = self.card.engine if self.card else "default"
+        payload_data = {
+            "proposal": decision.model_dump(),
+            "decision": decision.model_dump(),
+            "round": round_num,
+        }
+        return UACPMessage(
+            correlation_id=message.correlation_id,
+            trace_id=message.trace_id,
+            sender=Party(agent_id=self.agent_id, engine=engine),
+            recipient=message.sender,
+            intent=Intent.negotiate,
+            payload=payload_data,
+        )
+
+    def evaluate_counter(
+        self,
+        counter_proposal: NegotiationProposal,
+        round_num: int = 2,
+    ) -> NegotiationDecision:
+        """Evaluate a received counter-offer from a peer agent."""
+        context = self.get_negotiation_context()
+        return self.negotiation_policy.evaluate(counter_proposal, context, round_num=round_num)
+
+    async def handle_handoff(self, message: UACPMessage) -> UACPMessage:
+        """Handle incoming session handoff, verifying state integrity first."""
+        payload = HandoffPayload.model_validate(message.payload)
+
+        # Verify hash chain integrity if Whiteboard is available
+        is_valid = True
+        verification_details = "Verified"
+        if self.whiteboard is not None:
+            try:
+                report = await self.whiteboard.verify_chain()
+                is_valid = report.is_valid
+                verification_details = report.details
+            except Exception as e:
+                is_valid = False
+                verification_details = f"Verification error: {e}"
+
+        engine = self.card.engine if self.card else "default"
+
+        if not is_valid:
+            return UACPMessage(
+                correlation_id=message.correlation_id,
+                trace_id=message.trace_id,
+                sender=Party(agent_id=self.agent_id, engine=engine),
+                recipient=message.sender,
+                intent=Intent.task_result,
+                payload={
+                    "status": "rejected",
+                    "summary": f"Handoff rejected: TamperDetected ({verification_details})",
+                    "result_ref": payload.context_ref,
+                    "is_valid": False,
+                },
+            )
+
+        return UACPMessage(
+            correlation_id=message.correlation_id,
+            trace_id=message.trace_id,
+            sender=Party(agent_id=self.agent_id, engine=engine),
+            recipient=message.sender,
+            intent=Intent.task_result,
+            payload={
+                "status": "success",
+                "summary": f"Handoff accepted: {payload.reason}",
+                "result_ref": payload.context_ref,
+                "is_valid": True,
+            },
+        )
+
+    async def handoff(
+        self,
+        target_agent_id: str,
+        reason: str,
+        session_id: str | None = None,
+        context_ref: str | None = None,
+    ) -> JSONRPCResponse:
+        """Initiate session handoff to target agent and transition caller to observer mode."""
+        if self.router is None:
+            raise ValueError(f"Agent '{self.agent_id}' has no router configured for handoff.")
+
+        sid = session_id or (self.whiteboard.session_id if self.whiteboard else "default")
+        payload = HandoffPayload(
+            target_agent=target_agent_id,
+            reason=reason,
+            context_ref=context_ref,
+        )
+        engine = self.card.engine if self.card else "default"
+        msg = UACPMessage(
+            correlation_id=sid,
+            trace_id=f"handoff-{self.agent_id}-{target_agent_id}",
+            sender=Party(agent_id=self.agent_id, engine=engine),
+            recipient=Party(agent_id=target_agent_id),
+            intent=Intent.handoff,
+            payload=payload.model_dump(),
+        )
+
+        response = await self.router.send(msg, session_id=sid)
+        # On initiating handoff, caller transitions to observer (read-only)
+        self.set_observer(True)
+        return response
+
+    async def negotiate(
+        self,
+        recipient_agent_id: str,
+        proposal: NegotiationProposal,
+        session_id: str | None = None,
+        max_rounds: int = 2,
+    ) -> NegotiationOutcome:
+        """Initiate bilateral negotiation with recipient agent through router."""
+        if self.router is None:
+            raise ValueError(f"Agent '{self.agent_id}' has no router configured for negotiation.")
+
+        sid = session_id or (self.whiteboard.session_id if self.whiteboard else "default")
+        return await execute_negotiation(
+            router=self.router,
+            session_id=sid,
+            initiator_agent_id=self.agent_id,
+            responder_agent_id=recipient_agent_id,
+            proposal=proposal,
+            max_rounds=max_rounds,
         )
 
     async def handle_default(self, message: UACPMessage) -> UACPMessage:
