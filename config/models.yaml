@@ -91,3 +91,18 @@ embeddings:
   default_local:
     model_id: "all-MiniLM-L6-v2"
 
+# ── Resolver Configuration ───────────────────────────────────────
+resolver:
+  w_recency: 0.4
+  w_certainty: 0.5
+  w_source: 0.1
+  half_life_days: 30.0
+  margin: 0.15
+  similarity_threshold: 0.85
+  default_source_prior: 0.5
+  source_priors:
+    AgentAlpha: 0.9
+    AgentBeta: 0.8
+    untrusted_agent: 0.2
+
+

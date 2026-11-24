@@ -100,6 +100,21 @@ class QueryResult(BaseModel):
     score: float = Field(..., description="Cosine similarity score.")
 
 
+class ConflictRecord(BaseModel):
+    """Record of a contradiction detection and resolution."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(default_factory=lambda: f"cnf-{uuid.uuid4().hex[:12]}")
+    fact_a: str = Field(..., description="ID of first fact.")
+    fact_b: str = Field(..., description="ID of second fact.")
+    score_a: float = Field(..., description="Scoring outcome for fact_a.")
+    score_b: float = Field(..., description="Scoring outcome for fact_b.")
+    method: str = Field(..., description="Method used: 'scoring', 'scoring+llm_judge', 'manual'.")
+    resolved_at: str | None = Field(default=None, description="ISO-8601 timestamp when resolved.")
+    resolution: str = Field(..., description="Resolution status or winning outcome.")
+
+
 # ── Store Implementation ─────────────────────────────────────────────────
 
 
@@ -546,6 +561,133 @@ class KnowledgeStore:
                 (fact_id,),
             )
 
+    def _get_fact_sync(self, fact_id: str) -> Fact | None:
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, subject, predicate, object, text, confidence, source_agent,
+                       source_session, created_at, valid_from, valid_to, status
+                FROM facts WHERE id = ?
+                """,
+                (fact_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            ev_map = self._load_evidence_for_facts(cursor, [fact_id])
+            return self._row_to_fact(row, ev_map.get(fact_id, []))
+
+    def _get_fact_embedding_sync(self, fact_id: str) -> NDArray[np.float32] | None:
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute("SELECT embedding FROM facts WHERE id = ?", (fact_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return np.frombuffer(row[0], dtype=np.float32)
+
+    def _set_fact_status_sync(self, fact_id: str, status: str, valid_to: str | None) -> None:
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE facts SET status = ?, valid_to = ? WHERE id = ?",
+                (status, valid_to, fact_id),
+            )
+
+    def _record_conflict_sync(self, cnf: ConflictRecord) -> ConflictRecord:
+        with self._lock, self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO conflicts (
+                    id, fact_a, fact_b, score_a, score_b, method, resolved_at, resolution
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    score_a = excluded.score_a,
+                    score_b = excluded.score_b,
+                    method = excluded.method,
+                    resolved_at = excluded.resolved_at,
+                    resolution = excluded.resolution
+                """,
+                (
+                    cnf.id,
+                    cnf.fact_a,
+                    cnf.fact_b,
+                    cnf.score_a,
+                    cnf.score_b,
+                    cnf.method,
+                    cnf.resolved_at,
+                    cnf.resolution,
+                ),
+            )
+            return cnf
+
+    def _update_conflict_sync(
+        self, conflict_id: str, resolution: str, method: str, resolved_at: str | None
+    ) -> None:
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE conflicts SET resolution = ?, method = ?, resolved_at = ? WHERE id = ?",
+                (resolution, method, resolved_at, conflict_id),
+            )
+
+    def _get_conflicts_sync(self, unresolved_only: bool) -> list[ConflictRecord]:
+        with self._lock:
+            cursor = self._conn.cursor()
+            if unresolved_only:
+                cursor.execute(
+                    """
+                    SELECT id, fact_a, fact_b, score_a, score_b, method, resolved_at, resolution
+                    FROM conflicts
+                    WHERE resolution = 'disputed' OR resolved_at IS NULL
+                    ORDER BY rowid DESC
+                    """
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, fact_a, fact_b, score_a, score_b, method, resolved_at, resolution
+                    FROM conflicts ORDER BY rowid DESC
+                    """
+                )
+            rows = cursor.fetchall()
+            return [
+                ConflictRecord(
+                    id=r[0],
+                    fact_a=r[1],
+                    fact_b=r[2],
+                    score_a=r[3],
+                    score_b=r[4],
+                    method=r[5],
+                    resolved_at=r[6],
+                    resolution=r[7],
+                )
+                for r in rows
+            ]
+
+    def _get_conflict_sync(self, conflict_id: str) -> ConflictRecord | None:
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, fact_a, fact_b, score_a, score_b, method, resolved_at, resolution
+                FROM conflicts WHERE id = ?
+                """,
+                (conflict_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return ConflictRecord(
+                id=row[0],
+                fact_a=row[1],
+                fact_b=row[2],
+                score_a=row[3],
+                score_b=row[4],
+                method=row[5],
+                resolved_at=row[6],
+                resolution=row[7],
+            )
+
     # ── Asynchronous public interface ───────────────────────────────────
 
     async def add_fact(
@@ -614,6 +756,64 @@ class KnowledgeStore:
     async def dispute_fact(self, fact_id: str) -> None:
         """Mark a fact as disputed (never deleted)."""
         await asyncio.to_thread(self._dispute_sync, fact_id)
+
+    async def get_fact(self, fact_id: str) -> Fact | None:
+        """Retrieve a single fact by its ID."""
+        return await asyncio.to_thread(self._get_fact_sync, fact_id)
+
+    async def get_fact_embedding(self, fact_id: str) -> NDArray[np.float32] | None:
+        """Retrieve the float32 vector embedding for a fact."""
+        return await asyncio.to_thread(self._get_fact_embedding_sync, fact_id)
+
+    async def set_fact_status(
+        self, fact_id: str, status: str, valid_to: str | None = None
+    ) -> None:
+        """Update fact status ('active', 'superseded', 'disputed') and valid_to timestamp."""
+        await asyncio.to_thread(self._set_fact_status_sync, fact_id, status, valid_to)
+
+    async def record_conflict(
+        self,
+        fact_a: str,
+        fact_b: str,
+        score_a: float,
+        score_b: float,
+        method: str,
+        resolution: str,
+        resolved_at: str | None = None,
+        conflict_id: str | None = None,
+    ) -> ConflictRecord:
+        """Record or update a conflict decision in the conflicts table."""
+        cnf = ConflictRecord(
+            id=conflict_id or f"cnf-{uuid.uuid4().hex[:12]}",
+            fact_a=fact_a,
+            fact_b=fact_b,
+            score_a=score_a,
+            score_b=score_b,
+            method=method,
+            resolved_at=resolved_at,
+            resolution=resolution,
+        )
+        return await asyncio.to_thread(self._record_conflict_sync, cnf)
+
+    async def update_conflict(
+        self,
+        conflict_id: str,
+        resolution: str,
+        method: str = "manual",
+        resolved_at: str | None = None,
+    ) -> None:
+        """Update the resolution and timestamp of an existing conflict record."""
+        await asyncio.to_thread(
+            self._update_conflict_sync, conflict_id, resolution, method, resolved_at
+        )
+
+    async def get_conflicts(self, unresolved_only: bool = False) -> list[ConflictRecord]:
+        """Retrieve conflict records, optionally filtering to unresolved/disputed."""
+        return await asyncio.to_thread(self._get_conflicts_sync, unresolved_only)
+
+    async def get_conflict(self, conflict_id: str) -> ConflictRecord | None:
+        """Retrieve a single conflict record by ID."""
+        return await asyncio.to_thread(self._get_conflict_sync, conflict_id)
 
     async def promote(
         self,
