@@ -529,3 +529,121 @@ def run_loop_demo_cmd(
     if exit_code != 0:
         raise typer.Exit(code=exit_code)
 
+
+@uacp_app.command("serve")
+def serve_cmd(
+    host: Annotated[str, typer.Option("--host", help="Host interface to bind")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="Port to listen on")] = 8000,
+    db_path: Annotated[
+        str,
+        typer.Option("--db-path", help="Path to SQLite whiteboard database"),
+    ] = "uacp_whiteboard.db",
+) -> None:
+    """Start the UACP FastAPI HTTP server backed by SQLite Whiteboard."""
+    load_env()
+    import uvicorn
+
+    from uacp.memory.whiteboard.sqlite_backend import SqliteWhiteboardBackend
+    from uacp.protocol.capabilities import CapabilityRegistry
+    from uacp.protocol.router import Router
+    from uacp.protocol.transport.inproc import InProcessTransport
+    from uacp.server.app import create_app
+
+    whiteboard = SqliteWhiteboardBackend(db_path)
+    registry = CapabilityRegistry()
+    transport = InProcessTransport()
+    router = Router(whiteboard=whiteboard, transport=transport, registry=registry)
+    app = create_app(router=router, whiteboard=whiteboard, registry=registry)
+    console.print(
+        f"[bold green]Starting UACP server on {host}:{port} with db '{db_path}'[/bold green]"
+    )
+    uvicorn.run(app, host=host, port=port)
+
+
+agent_app = typer.Typer(
+    name="agent",
+    help="Manage and run remote UACP agents.",
+    no_args_is_help=True,
+)
+uacp_app.add_typer(agent_app, name="agent")
+
+
+@agent_app.command("run")
+def agent_run_cmd(
+    agent_type: Annotated[str, typer.Argument(help="Agent type: 'alpha' or 'beta'")],
+    server: Annotated[
+        str,
+        typer.Option("--server", help="URL of the UACP server (e.g. http://127.0.0.1:8000)"),
+    ],
+    alias: Annotated[str | None, typer.Option("--alias", help="Model alias override")] = None,
+    db_path: Annotated[
+        str,
+        typer.Option("--db-path", help="Path to SQLite whiteboard database"),
+    ] = "uacp_whiteboard.db",
+) -> None:
+    """Wire specified agent (alpha or beta) to communicate with server over HTTPTransport."""
+    load_env()
+    import httpx
+
+    from uacp.adapters.registry import get_adapter
+    from uacp.agents.alpha_research import AlphaResearchAgent
+    from uacp.agents.beta_execution import BetaExecutionAgent
+    from uacp.memory.whiteboard.client import WhiteboardClient
+    from uacp.memory.whiteboard.sqlite_backend import SqliteWhiteboardBackend
+    from uacp.protocol.capabilities import build_agent_card
+    from uacp.protocol.router import Router
+    from uacp.protocol.transport.http import HTTPTransport
+
+    agent_norm = agent_type.strip().lower()
+    if agent_norm not in ("alpha", "beta"):
+        console.print(
+            f"[bold red]Unknown agent type '{agent_type}'. Must be 'alpha' or 'beta'.[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+    model_alias = alias or (f"{agent_norm}_default")
+    adapter = get_adapter(model_alias)
+    whiteboard = SqliteWhiteboardBackend(db_path)
+    transport = HTTPTransport(endpoint=server)
+    router = Router(whiteboard=whiteboard, transport=transport)
+
+    if agent_norm == "alpha":
+        AlphaResearchAgent(
+            agent_id="alpha",
+            adapter=adapter,
+            whiteboard=WhiteboardClient(whiteboard, session_id="cli-session", author="alpha"),
+            router=router,
+        )
+        card = build_agent_card(AlphaResearchAgent, agent_id="alpha")
+    else:
+        BetaExecutionAgent(
+            agent_id="beta",
+            adapter=adapter,
+            whiteboard=WhiteboardClient(whiteboard, session_id="cli-session", author="beta"),
+            router=router,
+        )
+        card = build_agent_card(BetaExecutionAgent, agent_id="beta")
+
+    # Register agent card with server
+    target_url = f"{server.rstrip('/')}/agents"
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(target_url, json=card.model_dump())
+            if resp.status_code == 200:
+                console.print(
+                    f"[bold green]Registered {agent_norm} card with server {server}[/bold green]"
+                )
+            else:
+                console.print(
+                    f"[yellow]Warning: registration at {target_url} returned "
+                    f"{resp.status_code}[/yellow]"
+                )
+    except Exception as exc:
+        console.print(f"[yellow]Warning: could not register with server {server}: {exc}[/yellow]")
+
+    console.print(
+        f"[bold green]Agent '{agent_norm}' running connected to {server} "
+        f"(db: {db_path})[/bold green]"
+    )
+
+
