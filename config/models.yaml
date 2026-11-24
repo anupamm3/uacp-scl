@@ -77,3 +77,17 @@ aliases:
       requests_per_minute: 999
       tokens_per_minute: 999_999
       daily_requests: null
+
+  embeddings_default:
+    provider: local
+    model_id: "all-MiniLM-L6-v2"
+    limits:
+      requests_per_minute: null
+      tokens_per_minute: null
+      daily_requests: null
+
+# ── Embeddings Configuration ─────────────────────────────────────
+embeddings:
+  default_local:
+    model_id: "all-MiniLM-L6-v2"
+
